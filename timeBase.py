@@ -13,6 +13,7 @@ from PyQt5.QtGui import QFont, QIcon, QPixmap, QColor, QLinearGradient, QBrush, 
 from PyQt5.QtWidgets import QGraphicsDropShadowEffect, QSizePolicy
 import urllib.request
 from io import BytesIO
+from print import print_slip  # Import print_slip function
 
 # Device configuration
 IP = "192.168.0.82"
@@ -165,7 +166,7 @@ class AuthEventMonitor(QThread):
                 print(f"Error in monitoring loop: {e}")
             
             # Sleep for a short period before the next check
-            time.sleep(5)
+            time.sleep(1)
     
     def stop(self):
         """Stop the monitoring thread"""
@@ -177,6 +178,8 @@ class AuthEventItem(QFrame):
     def __init__(self, event_data):
         super().__init__()
         self.event_data = event_data
+        # Store the minor value for authentication type
+        self.minor = event_data.get('minor', 0)
         self.setStyleSheet("""
             QFrame {
                 background-color: #2c3e50;
@@ -199,33 +202,6 @@ class AuthEventItem(QFrame):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(6, 6, 6, 6)
         layout.setSpacing(4)
-        
-        # Header with employee ID and time
-        header = QWidget()
-        header_layout = QHBoxLayout(header)
-        header_layout.setContentsMargins(0, 0, 0, 0)
-        
-        emp_id = event_data.get('employeeNoString', event_data.get('employeeNo', 'N/A'))
-        id_label = QLabel(f"ID: {emp_id}")
-        id_label.setStyleSheet("color: #ecf0f1; background: transparent; font-size: 11px;")
-        
-        # Get time and format it nicely
-        event_time = event_data.get('time', 'N/A')
-        if 'T' in event_time:
-            time_parts = event_time.split('T')[1].split('+')[0]
-            if len(time_parts) > 5:  # Has seconds
-                time_display = time_parts
-            else:
-                time_display = time_parts
-        else:
-            time_display = event_time
-            
-        time_label = QLabel(time_display)
-        time_label.setStyleSheet("color: #bdc3c7; background: transparent; font-size: 11px;")
-        
-        header_layout.addWidget(id_label)
-        header_layout.addStretch()
-        header_layout.addWidget(time_label)
         
         # Create image container - adjusted for horizontal images
         self.image_container = QWidget()
@@ -254,78 +230,79 @@ class AuthEventItem(QFrame):
         image_outer_layout.addWidget(self.image_container)
         image_outer_layout.setAlignment(Qt.AlignCenter)
         
-        # Name
-        name = event_data.get('name', 'N/A')
-        name_label = QLabel(name)
-        name_label.setStyleSheet("""
+        # ID (previously name)
+        emp_id = event_data.get('employeeNoString', event_data.get('employeeNo', 'N/A'))
+        id_label = QLabel(emp_id)
+        id_label.setStyleSheet("""
             color: white; 
             font-weight: bold; 
             font-size: 14px;
             background: transparent;
         """)
-        name_label.setAlignment(Qt.AlignCenter)
+        id_label.setAlignment(Qt.AlignCenter)
         
         # Create info section
         info_widget = QWidget()
         info_layout = QHBoxLayout(info_widget)
         info_layout.setContentsMargins(0, 0, 0, 0)
         
-        # Check for attendance info
-        attendance_status = "N/A"
-        label_name = "N/A"
-        if "AttendanceInfo" in event_data:
-            att = event_data["AttendanceInfo"]
-            attendance_status = att.get('attendanceStatus', 'N/A')
-            label_name = att.get('labelName', 'N/A')
+        # Get event time for date display
+        event_time = event_data.get('time', 'N/A')
+        if 'T' in event_time:
+            date_parts = event_time.split('T')[0] if 'T' in event_time else event_time
+            time_parts = event_time.split('T')[1].split('+')[0] if 'T' in event_time else ""
+        else:
+            date_parts = ""
+            time_parts = event_time
             
-        # Left column
+        # Left column - Name (previously Status)
         left_column = QWidget()
         left_layout = QVBoxLayout(left_column)
         left_layout.setContentsMargins(0, 0, 0, 0)
         left_layout.setSpacing(2)
         
-        status_label = QLabel("STATUS")
-        status_label.setStyleSheet("color: #bdc3c7; font-size: 10px; background: transparent;")
+        name_label = QLabel("NAME")
+        name_label.setStyleSheet("color: #bdc3c7; font-size: 10px; background: transparent;")
         
-        status_value = QLabel(attendance_status)
-        status_value.setStyleSheet("""
+        name = event_data.get('name', 'N/A')
+        name_value = QLabel(name)
+        name_value.setStyleSheet("""
             color: #2ecc71; 
             font-weight: bold; 
             font-size: 13px;
             background: transparent;
         """)
         
-        left_layout.addWidget(status_label)
-        left_layout.addWidget(status_value)
+        left_layout.addWidget(name_label)
+        left_layout.addWidget(name_value)
         
-        # Right column
+        # Right column - Date (previously Label)
         right_column = QWidget()
         right_layout = QVBoxLayout(right_column)
         right_layout.setContentsMargins(0, 0, 0, 0)
         right_layout.setSpacing(2)
         
-        label_title = QLabel("LABEL")
-        label_title.setStyleSheet("color: #bdc3c7; font-size: 10px; background: transparent;")
+        date_title = QLabel("DATE")
+        date_title.setStyleSheet("color: #bdc3c7; font-size: 10px; background: transparent;")
         
-        label_value = QLabel(label_name)
-        label_value.setStyleSheet("""
+        date_value = QLabel(date_parts)
+        date_value.setStyleSheet("""
             color: #3498db; 
             font-weight: bold; 
             font-size: 13px;
             background: transparent;
         """)
         
-        right_layout.addWidget(label_title)
-        right_layout.addWidget(label_value)
+        right_layout.addWidget(date_title)
+        right_layout.addWidget(date_value)
         
         # Add columns to info layout
         info_layout.addWidget(left_column)
         info_layout.addWidget(right_column)
         
         # Add all widgets to main layout
-        layout.addWidget(header)
         layout.addWidget(image_outer_container)
-        layout.addWidget(name_label)
+        layout.addWidget(id_label)
         layout.addWidget(info_widget)
         
         # Load image if available - do this last
@@ -334,6 +311,50 @@ class AuthEventItem(QFrame):
     
     def load_image(self, url):
         """Load image from URL and display it"""
+        # Check minor value to determine which image to display
+        if self.minor == 1:  # Card authentication
+            try:
+                self.image_label.setText("")
+                card_pixmap = QPixmap("card.png")
+                if not card_pixmap.isNull():
+                    scaled_pixmap = card_pixmap.scaled(
+                        self.image_label.width(),
+                        self.image_label.height(),
+                        Qt.KeepAspectRatio,
+                        Qt.SmoothTransformation
+                    )
+                    self.image_label.setPixmap(scaled_pixmap)
+                else:
+                    self.image_label.setText("Card Image Not Found")
+                    self.image_label.setStyleSheet("color: #bdc3c7; background: transparent;")
+            except Exception as e:
+                print(f"Error loading card image: {e}")
+                self.image_label.setText("Card Error")
+                self.image_label.setStyleSheet("color: #e74c3c; background: transparent;")
+            return
+            
+        elif self.minor == 38:  # Fingerprint authentication
+            try:
+                self.image_label.setText("")
+                fp_pixmap = QPixmap("fp.png")
+                if not fp_pixmap.isNull():
+                    scaled_pixmap = fp_pixmap.scaled(
+                        self.image_label.width(),
+                        self.image_label.height(),
+                        Qt.KeepAspectRatio,
+                        Qt.SmoothTransformation
+                    )
+                    self.image_label.setPixmap(scaled_pixmap)
+                else:
+                    self.image_label.setText("FP Image Not Found")
+                    self.image_label.setStyleSheet("color: #bdc3c7; background: transparent;")
+            except Exception as e:
+                print(f"Error loading fingerprint image: {e}")
+                self.image_label.setText("FP Error")
+                self.image_label.setStyleSheet("color: #e74c3c; background: transparent;")
+            return
+            
+        # For other authentication types or when face image is available
         if not url or url == 'N/A':
             # Set default image if no URL provided
             self.image_label.setText("No Image")
@@ -427,6 +448,8 @@ class EzeeCanteen(QMainWindow):
         self.communicator = Communicator()
         self.events = []
         self.max_events = 18  # Increased maximum number of events
+        self.token_counter = 0  # Initialize token counter
+        self.current_date = datetime.now().date()  # Track date for token counter reset
         self.init_ui()
         
         # Connect resize event to refresh grid
@@ -437,6 +460,25 @@ class EzeeCanteen(QMainWindow):
         print
         self.communicator.new_auth_event.connect(self.add_auth_event)
         self.auth_monitor.start()
+        
+        # Load printer settings from appSettings.json if available
+        try:
+            with open('appSettings.json', 'r') as f:
+                app_settings = json.load(f)
+                printer_config = app_settings.get('PrinterConfig', {})
+                self.printer_ip = printer_config.get('IP', "192.168.0.251")
+                self.printer_port = printer_config.get('Port', 9100)
+                self.header = printer_config.get('Header', {'enable': True, 'text': "EzeeCanteen"})
+                self.footer = printer_config.get('Footer', {'enable': True, 'text': "Thank you!"})
+                self.special_message = printer_config.get('SpecialMessage', "")
+        except Exception as e:
+            print(f"Error loading printer settings: {e}")
+            # Default printer settings
+            self.printer_ip = "192.168.0.251"
+            self.printer_port = 9100
+            self.header = {'enable': True, 'text': "EzeeCanteen"}
+            self.footer = {'enable': True, 'text': "Thank you!"}
+            self.special_message = ""
         
     def init_ui(self):
         # Set window properties
@@ -613,10 +655,67 @@ class EzeeCanteen(QMainWindow):
         main_layout.addWidget(footer_frame)
     
     def add_auth_event(self, event_data):
-        """Add a new authentication event to the grid"""
+        """Add a new authentication event to the grid and print a token"""
         # Add event to the list
         if(event_data.get('employeeNoString')):
+            print(f"event_data{event_data}\n\n")
             self.events.insert(0, event_data)
+            
+            # Check if day has changed to reset token counter
+            today = datetime.now().date()
+            if today != self.current_date:
+                self.token_counter = 0
+                self.current_date = today
+            
+            # Generate and print token
+            self.token_counter += 1
+            
+            # Extract data for token
+            emp_id = event_data.get('employeeNoString', event_data.get('employeeNo', 'N/A'))
+            name = event_data.get('name', 'N/A')
+            punch_time = event_data.get('time', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+            
+            # Format punch time if needed
+            if 'T' in punch_time:
+                punch_time = punch_time.replace('T', ' ').split('+')[0]
+            
+            # Determine coupon type based on current time
+            current_hour = datetime.now().hour
+            if 6 <= current_hour < 11:
+                coupon_type = "BREAKFAST"
+            elif 11 <= current_hour < 15:
+                coupon_type = "LUNCH"
+            elif 15 <= current_hour < 18:
+                coupon_type = "SNACKS"
+            elif 18 <= current_hour < 22:
+                coupon_type = "DINNER"
+            else:
+                coupon_type = "MEAL"
+            
+            # Get attendance status if available
+            if "AttendanceInfo" in event_data:
+                att = event_data["AttendanceInfo"]
+                status = att.get('attendanceStatus', '')
+                if status:
+                    self.special_message = f"Status: {status}"
+            
+            # Print token slip
+            try:
+                print_slip(
+                    self.printer_ip, 
+                    self.printer_port, 
+                    self.token_counter, 
+                    self.header, 
+                    coupon_type, 
+                    emp_id, 
+                    name, 
+                    punch_time, 
+                    self.special_message, 
+                    self.footer
+                )
+                print(f"Token {self.token_counter} printed for {name}")
+            except Exception as e:
+                print(f"Error printing token: {e}")
         
         # Limit the number of events
         if len(self.events) > self.max_events:
