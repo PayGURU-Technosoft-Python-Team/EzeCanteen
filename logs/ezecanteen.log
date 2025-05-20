@@ -1,0 +1,572 @@
+2025-05-16 17:14:06,674 - root - INFO - EzeeCanteen application starting
+2025-05-16 17:14:06,706 - root - INFO - Getting device details for 192.168.0.82:80 with user: admin, password length: 10
+2025-05-16 17:14:06,739 - root - INFO - Successfully retrieved device details from 192.168.0.82:80
+2025-05-16 17:14:06,748 - root - INFO - Device info: Model=DS-K1T671MF, Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-16 17:14:06,749 - root - INFO - Device details initialized: Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-16 17:14:06,749 - root - INFO - Testing database connection to 103.216.211.36:33975
+2025-05-16 17:14:06,926 - root - INFO - Database connection successful
+2025-05-16 17:14:06,929 - root - INFO - Loaded printer config: IP=192.168.0.251, Port=9100
+2025-05-16 17:14:06,965 - root - INFO - Printer connection successful (192.168.0.251:9100)
+2025-05-16 17:14:06,968 - root - INFO - Meal schedule configured: 10:09 to 20:09
+2025-05-16 17:14:06,968 - root - INFO - AuthEventMonitor initialized with endpoint: http://192.168.0.82:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-16 17:14:06,969 - root - INFO - Auth event monitoring started
+2025-05-16 17:14:11,470 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-16T17:14:11+05:30
+2025-05-16 17:14:11,472 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-16T17:14:11+05:30
+2025-05-16 17:14:16,684 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-16T17:14:16+05:30
+2025-05-16 17:15:07,970 - root - WARNING - Printer connection failed (192.168.0.252:9100)
+2025-05-16 17:16:07,982 - root - WARNING - Printer connection failed (192.168.0.252:9100)
+2025-05-16 17:17:07,986 - root - WARNING - Printer connection failed (192.168.0.252:9100)
+2025-05-16 17:17:44,356 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-16T17:17:43+05:30
+2025-05-16 17:17:44,357 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-16T17:17:43+05:30
+2025-05-16 17:17:49,599 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-16T17:17:48+05:30
+2025-05-16 17:18:07,982 - root - WARNING - Printer connection failed (192.168.0.252:9100)
+2025-05-16 17:19:07,972 - root - WARNING - Printer connection failed (192.168.0.252:9100)
+2025-05-16 17:20:07,982 - root - WARNING - Printer connection failed (192.168.0.252:9100)
+2025-05-16 17:25:29,847 - root - INFO - EzeeCanteen application starting
+2025-05-16 17:25:29,853 - root - INFO - Getting device details for 192.168.0.82:80 with user: admin, password length: 10
+2025-05-16 17:25:29,889 - root - INFO - Successfully retrieved device details from 192.168.0.82:80
+2025-05-16 17:25:29,897 - root - INFO - Device info: Model=DS-K1T671MF, Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-16 17:25:29,898 - root - INFO - Device details initialized: Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-16 17:25:29,898 - root - INFO - Testing database connection to 103.216.211.36:33975
+2025-05-16 17:25:30,071 - root - INFO - Database connection successful
+2025-05-16 17:25:30,073 - root - INFO - Loaded printer config: IP=192.168.0.251, Port=9100
+2025-05-16 17:25:30,092 - root - INFO - Printer connection successful (192.168.0.251:9100)
+2025-05-16 17:25:30,093 - root - INFO - Meal schedule configured: 10:09 to 20:09
+2025-05-16 17:25:30,094 - root - INFO - AuthEventMonitor initialized with endpoint: http://192.168.0.82:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-16 17:25:30,095 - root - INFO - Auth event monitoring started
+2025-05-16 17:25:31,026 - root - INFO - Auth event monitoring stopped
+2025-05-16 17:30:51,664 - root - INFO - EzeeCanteen application starting
+2025-05-16 17:30:51,669 - root - INFO - Getting device details for 192.168.0.82:80 with user: admin, password length: 10
+2025-05-16 17:30:51,703 - root - INFO - Successfully retrieved device details from 192.168.0.82:80
+2025-05-16 17:30:51,711 - root - INFO - Device info: Model=DS-K1T671MF, Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-16 17:30:51,712 - root - INFO - Device details initialized: Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-16 17:30:51,712 - root - INFO - Testing database connection to 103.216.211.36:33975
+2025-05-16 17:30:51,892 - root - INFO - Database connection successful
+2025-05-16 17:30:51,893 - root - INFO - Loaded printer config: IP=192.168.0.251, Port=9100
+2025-05-16 17:30:51,918 - root - INFO - Printer connection successful (192.168.0.251:9100)
+2025-05-16 17:30:51,919 - root - INFO - Meal schedule configured: 10:09 to 20:09
+2025-05-16 17:30:51,919 - root - INFO - AuthEventMonitor initialized with endpoint: http://192.168.0.82:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-16 17:30:51,920 - root - INFO - Auth event monitoring started
+2025-05-16 17:30:53,814 - root - INFO - Auth event monitoring stopped
+2025-05-16 17:31:12,296 - root - INFO - EzeeCanteen application starting
+2025-05-16 17:31:12,301 - root - INFO - Getting device details for 192.168.0.82:80 with user: admin, password length: 10
+2025-05-16 17:31:12,316 - root - INFO - Successfully retrieved device details from 192.168.0.82:80
+2025-05-16 17:31:12,317 - root - INFO - Device info: Model=DS-K1T671MF, Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-16 17:31:12,318 - root - INFO - Device details initialized: Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-16 17:31:12,318 - root - INFO - Testing database connection to 103.216.211.36:33975
+2025-05-16 17:31:12,500 - root - INFO - Database connection successful
+2025-05-16 17:31:12,503 - root - INFO - Loaded printer config: IP=192.168.0.251, Port=9100
+2025-05-16 17:31:12,514 - root - INFO - Printer connection successful (192.168.0.251:9100)
+2025-05-16 17:31:12,516 - root - INFO - Meal schedule configured: 10:09 to 20:09
+2025-05-16 17:31:12,517 - root - INFO - AuthEventMonitor initialized with endpoint: http://192.168.0.82:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-16 17:31:12,519 - root - INFO - Auth event monitoring started
+2025-05-16 17:31:19,803 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-16T17:31:19+05:30
+2025-05-16 17:31:19,805 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-16T17:31:19+05:30
+2025-05-16 17:31:20,055 - root - ERROR - Database insertion error: 1364 (HY000): Field 'CanteenMode' doesn't have a default value
+2025-05-16 17:31:21,929 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-16T17:31:21+05:30
+2025-05-16 17:31:22,187 - root - ERROR - Database insertion error: 1364 (HY000): Field 'CanteenMode' doesn't have a default value
+2025-05-16 17:31:23,230 - root - INFO - Auth event monitoring stopped
+2025-05-16 18:07:42,129 - root - INFO - EzeeCanteen application starting
+2025-05-16 18:07:42,161 - root - INFO - Getting device details for 192.168.0.82:80 with user: admin, password length: 10
+2025-05-16 18:07:42,181 - root - INFO - Successfully retrieved device details from 192.168.0.82:80
+2025-05-16 18:07:42,189 - root - INFO - Device info: Model=DS-K1T671MF, Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-16 18:07:42,190 - root - INFO - Device details initialized: Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-16 18:07:42,191 - root - INFO - Testing database connection to 103.216.211.36:33975
+2025-05-16 18:07:42,335 - root - INFO - Database connection successful
+2025-05-16 18:07:42,337 - root - INFO - Loaded printer config: IP=192.168.0.251, Port=9100
+2025-05-16 18:07:42,341 - root - INFO - Printer connection successful (192.168.0.251:9100)
+2025-05-16 18:07:42,342 - root - INFO - Meal schedule configured: 10:09 to 20:09
+2025-05-16 18:07:42,342 - root - INFO - AuthEventMonitor initialized with endpoint: http://192.168.0.82:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-16 18:07:42,343 - root - INFO - Auth event monitoring started
+2025-05-16 18:07:47,887 - root - INFO - Auth event monitoring stopped
+2025-05-16 18:07:51,345 - root - INFO - EzeeCanteen application starting
+2025-05-16 18:07:51,350 - root - INFO - Getting device details for 192.168.0.82:80 with user: admin, password length: 10
+2025-05-16 18:07:51,375 - root - INFO - Successfully retrieved device details from 192.168.0.82:80
+2025-05-16 18:07:51,375 - root - INFO - Device info: Model=DS-K1T671MF, Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-16 18:07:51,376 - root - INFO - Device details initialized: Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-16 18:07:51,376 - root - INFO - Testing database connection to 103.216.211.36:33975
+2025-05-16 18:07:51,520 - root - INFO - Database connection successful
+2025-05-16 18:07:51,523 - root - INFO - Loaded printer config: IP=192.168.0.251, Port=9100
+2025-05-16 18:07:51,533 - root - INFO - Printer connection successful (192.168.0.251:9100)
+2025-05-16 18:07:51,536 - root - INFO - Meal schedule configured: 10:09 to 20:09
+2025-05-16 18:07:51,537 - root - INFO - AuthEventMonitor initialized with endpoint: http://192.168.0.82:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-16 18:07:51,539 - root - INFO - Auth event monitoring started
+2025-05-16 18:07:58,998 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-16T18:07:58+05:30
+2025-05-16 18:07:59,000 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-16T18:07:58+05:30
+2025-05-16 18:07:59,200 - root - ERROR - Database insertion error: 1364 (HY000): Field 'CanteenMode' doesn't have a default value
+2025-05-16 18:08:01,096 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-16T18:07:59+05:30
+2025-05-16 18:08:01,294 - root - ERROR - Database insertion error: 1364 (HY000): Field 'CanteenMode' doesn't have a default value
+2025-05-16 18:08:03,263 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-16T18:08:01+05:30
+2025-05-16 18:08:03,463 - root - ERROR - Database insertion error: 1364 (HY000): Field 'CanteenMode' doesn't have a default value
+2025-05-16 18:08:07,481 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-16T18:08:06+05:30
+2025-05-16 18:08:08,534 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-16T18:08:07+05:30
+2025-05-16 18:08:08,535 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-16T18:08:07+05:30
+2025-05-16 18:08:08,734 - root - ERROR - Database insertion error: 1364 (HY000): Field 'CanteenMode' doesn't have a default value
+2025-05-16 18:08:12,775 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-16T18:08:12+05:30
+2025-05-16 18:08:16,998 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-16T18:08:15+05:30
+2025-05-16 18:08:16,999 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-16T18:08:15+05:30
+2025-05-16 18:08:17,203 - root - ERROR - Database insertion error: 1364 (HY000): Field 'CanteenMode' doesn't have a default value
+2025-05-16 18:08:29,740 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-16T18:08:17+05:30
+2025-05-16 18:08:29,741 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-16T18:08:20+05:30
+2025-05-16 18:08:29,941 - root - ERROR - Database insertion error: 1364 (HY000): Field 'CanteenMode' doesn't have a default value
+2025-05-16 18:08:30,162 - root - ERROR - Database insertion error: 1364 (HY000): Field 'CanteenMode' doesn't have a default value
+2025-05-16 18:08:30,797 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-16T18:08:23+05:30
+2025-05-16 18:08:30,996 - root - ERROR - Database insertion error: 1364 (HY000): Field 'CanteenMode' doesn't have a default value
+2025-05-16 18:08:32,922 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-16T18:08:26+05:30
+2025-05-16 18:08:33,132 - root - ERROR - Database insertion error: 1364 (HY000): Field 'CanteenMode' doesn't have a default value
+2025-05-16 18:08:37,098 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-16T18:08:28+05:30
+2025-05-16 18:08:37,299 - root - ERROR - Database insertion error: 1364 (HY000): Field 'CanteenMode' doesn't have a default value
+2025-05-16 18:08:38,161 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-16T18:08:33+05:30
+2025-05-16 18:08:38,162 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-16T18:08:37+05:30
+2025-05-16 18:08:43,355 - root - WARNING - Printer connection failed (192.168.0.252:9100)
+2025-05-16 18:08:43,412 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-16T18:08:37+05:30
+2025-05-16 18:08:43,611 - root - ERROR - Database insertion error: 1364 (HY000): Field 'CanteenMode' doesn't have a default value
+2025-05-16 18:08:46,580 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-16T18:08:42+05:30
+2025-05-16 18:08:52,557 - root - WARNING - Printer connection failed (192.168.0.252:9100)
+2025-05-16 18:08:59,874 - root - INFO - Auth event monitoring stopped
+2025-05-16 18:08:59,993 - asyncio - ERROR - Task was destroyed but it is pending!
+task: <Task pending name='Task-1' coro=<EzeeCanteenWindow.initialize_toggle_state() running at e:\Work\Actual-EzeCanteen\settings.py:315>>
+2025-05-16 18:08:59,997 - asyncio - ERROR - Task was destroyed but it is pending!
+task: <Task pending name='Task-2' coro=<EzeeCanteenWindow.load_settings() running at e:\Work\Actual-EzeCanteen\settings.py:445>>
+2025-05-16 18:16:17,807 - root - INFO - EzeeCanteen application starting
+2025-05-16 18:16:17,813 - root - INFO - Getting device details for 192.168.0.82:80 with user: admin, password length: 10
+2025-05-16 18:16:17,834 - root - INFO - Successfully retrieved device details from 192.168.0.82:80
+2025-05-16 18:16:17,842 - root - INFO - Device info: Model=DS-K1T671MF, Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-16 18:16:17,844 - root - INFO - Device details initialized: Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-16 18:16:17,844 - root - INFO - Testing database connection to 103.216.211.36:33975
+2025-05-16 18:16:17,991 - root - INFO - Database connection successful
+2025-05-16 18:16:17,993 - root - INFO - Loaded printer config: IP=192.168.0.251, Port=9100
+2025-05-16 18:16:18,023 - root - INFO - Printer connection successful (192.168.0.251:9100)
+2025-05-16 18:16:18,024 - root - INFO - Meal schedule configured: 10:09 to 20:09
+2025-05-16 18:16:18,025 - root - INFO - AuthEventMonitor initialized with endpoint: http://192.168.0.82:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-16 18:16:18,028 - root - INFO - Auth event monitoring started
+2025-05-16 18:16:18,078 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-16T18:16:04+05:30
+2025-05-16 18:16:18,079 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-16T18:16:04+05:30
+2025-05-16 18:16:18,079 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-16T18:16:09+05:30
+2025-05-16 18:16:18,328 - root - ERROR - Database insertion error: 1364 (HY000): Field 'CanteenMode' doesn't have a default value
+2025-05-16 18:16:25,407 - root - INFO - Auth event monitoring stopped
+2025-05-16 18:16:35,137 - root - INFO - EzeeCanteen application starting
+2025-05-16 18:16:35,141 - root - INFO - Getting device details for 192.168.0.82:80 with user: admin, password length: 10
+2025-05-16 18:16:35,177 - root - INFO - Successfully retrieved device details from 192.168.0.82:80
+2025-05-16 18:16:35,178 - root - INFO - Device info: Model=DS-K1T671MF, Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-16 18:16:35,180 - root - INFO - Device details initialized: Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-16 18:16:35,182 - root - INFO - Testing database connection to 103.216.211.36:33975
+2025-05-16 18:16:35,326 - root - INFO - Database connection successful
+2025-05-16 18:16:35,327 - root - INFO - Loaded printer config: IP=192.168.0.251, Port=9100
+2025-05-16 18:16:35,349 - root - INFO - Printer connection successful (192.168.0.251:9100)
+2025-05-16 18:16:35,351 - root - INFO - Meal schedule configured: 10:09 to 20:09
+2025-05-16 18:16:35,352 - root - INFO - AuthEventMonitor initialized with endpoint: http://192.168.0.82:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-16 18:16:35,353 - root - INFO - Auth event monitoring started
+2025-05-16 18:16:35,402 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-16T18:16:09+05:30
+2025-05-16 18:16:35,402 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-16T18:16:30+05:30
+2025-05-16 18:16:35,403 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-16T18:16:30+05:30
+2025-05-16 18:16:35,403 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-16T18:16:35+05:30
+2025-05-16 18:16:35,630 - root - ERROR - Database insertion error: 1364 (HY000): Field 'CanteenMode' doesn't have a default value
+2025-05-16 18:16:37,859 - root - INFO - Auth event monitoring stopped
+2025-05-16 18:16:50,024 - root - INFO - EzeeCanteen application starting
+2025-05-16 18:16:50,029 - root - INFO - Getting device details for 192.168.0.82:80 with user: admin, password length: 10
+2025-05-16 18:16:50,052 - root - INFO - Successfully retrieved device details from 192.168.0.82:80
+2025-05-16 18:16:50,053 - root - INFO - Device info: Model=DS-K1T671MF, Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-16 18:16:50,053 - root - INFO - Device details initialized: Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-16 18:16:50,053 - root - INFO - Testing database connection to 103.216.211.36:33975
+2025-05-16 18:16:50,220 - root - INFO - Database connection successful
+2025-05-16 18:16:50,222 - root - INFO - Loaded printer config: IP=192.168.0.251, Port=9100
+2025-05-16 18:16:50,231 - root - INFO - Printer connection successful (192.168.0.251:9100)
+2025-05-16 18:16:50,232 - root - INFO - Meal schedule configured: 10:09 to 20:09
+2025-05-16 18:16:50,233 - root - INFO - AuthEventMonitor initialized with endpoint: http://192.168.0.82:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-16 18:16:50,233 - root - INFO - Auth event monitoring started
+2025-05-16 18:16:50,273 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-16T18:16:30+05:30
+2025-05-16 18:16:50,274 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-16T18:16:30+05:30
+2025-05-16 18:16:50,274 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-16T18:16:35+05:30
+2025-05-16 18:16:50,274 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-16T18:16:38+05:30
+2025-05-16 18:16:50,274 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-16T18:16:38+05:30
+2025-05-16 18:16:50,275 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-16T18:16:43+05:30
+2025-05-16 18:16:50,275 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-16T18:16:45+05:30
+2025-05-16 18:16:50,275 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-16T18:16:48+05:30
+2025-05-16 18:16:50,511 - root - ERROR - Database insertion error: 1364 (HY000): Field 'CanteenMode' doesn't have a default value
+2025-05-16 18:16:51,270 - root - ERROR - Database insertion error: 1364 (HY000): Field 'CanteenMode' doesn't have a default value
+2025-05-16 18:16:51,469 - root - ERROR - Database insertion error: 1364 (HY000): Field 'CanteenMode' doesn't have a default value
+2025-05-16 18:16:51,666 - root - ERROR - Database insertion error: 1364 (HY000): Field 'CanteenMode' doesn't have a default value
+2025-05-16 18:16:51,862 - root - ERROR - Database insertion error: 1364 (HY000): Field 'CanteenMode' doesn't have a default value
+2025-05-16 18:16:53,357 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-16T18:16:53+05:30
+2025-05-16 18:16:55,833 - asyncio - ERROR - Task was destroyed but it is pending!
+task: <Task pending name='Task-1' coro=<EzeeCanteenWindow.initialize_toggle_state() running at e:\Work\Actual-EzeCanteen\settings.py:315>>
+2025-05-16 18:16:55,949 - asyncio - ERROR - Task was destroyed but it is pending!
+task: <Task pending name='Task-2' coro=<EzeeCanteenWindow.load_settings() running at e:\Work\Actual-EzeCanteen\settings.py:445>>
+2025-05-16 18:16:55,972 - asyncio - ERROR - Task was destroyed but it is pending!
+task: <Task pending name='Task-3' coro=<EzeeCanteenWindow.initialize_toggle_state() running at e:\Work\Actual-EzeCanteen\settings.py:315>>
+2025-05-16 18:16:55,974 - asyncio - ERROR - Task was destroyed but it is pending!
+task: <Task pending name='Task-4' coro=<EzeeCanteenWindow.load_settings() running at e:\Work\Actual-EzeCanteen\settings.py:445>>
+2025-05-16 18:16:55,978 - asyncio - ERROR - Task was destroyed but it is pending!
+task: <Task pending name='Task-5' coro=<EzeeCanteenWindow.initialize_toggle_state() running at e:\Work\Actual-EzeCanteen\settings.py:315>>
+2025-05-16 18:16:55,981 - asyncio - ERROR - Task was destroyed but it is pending!
+task: <Task pending name='Task-6' coro=<EzeeCanteenWindow.load_settings() running at e:\Work\Actual-EzeCanteen\settings.py:445>>
+2025-05-16 18:18:13,944 - root - INFO - EzeeCanteen application starting
+2025-05-16 18:18:13,950 - root - INFO - Getting device details for 192.168.0.82:80 with user: admin, password length: 10
+2025-05-16 18:18:13,987 - root - INFO - Successfully retrieved device details from 192.168.0.82:80
+2025-05-16 18:18:13,996 - root - INFO - Device info: Model=DS-K1T671MF, Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-16 18:18:13,996 - root - INFO - Device details initialized: Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-16 18:18:13,997 - root - INFO - Testing database connection to 103.216.211.36:33975
+2025-05-16 18:18:14,141 - root - INFO - Database connection successful
+2025-05-16 18:18:14,144 - root - INFO - Loaded printer config: IP=192.168.0.251, Port=9100
+2025-05-16 18:18:14,155 - root - INFO - Printer connection successful (192.168.0.251:9100)
+2025-05-16 18:18:14,158 - root - INFO - Meal schedule configured: 10:09 to 20:09
+2025-05-16 18:18:14,159 - root - INFO - AuthEventMonitor initialized with endpoint: http://192.168.0.82:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-16 18:18:14,161 - root - INFO - Auth event monitoring started
+2025-05-16 18:18:20,472 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-16T18:18:20+05:30
+2025-05-16 18:18:20,473 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-16T18:18:20+05:30
+2025-05-16 18:18:20,675 - root - ERROR - Database insertion error: 1364 (HY000): Field 'CanteenMode' doesn't have a default value
+2025-05-16 18:18:22,775 - root - INFO - Auth event monitoring stopped
+2025-05-16 18:18:36,961 - root - INFO - EzeeCanteen application starting
+2025-05-16 18:18:36,965 - root - INFO - Getting device details for 192.168.0.82:80 with user: admin, password length: 10
+2025-05-16 18:18:36,998 - root - INFO - Successfully retrieved device details from 192.168.0.82:80
+2025-05-16 18:18:36,999 - root - INFO - Device info: Model=DS-K1T671MF, Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-16 18:18:36,999 - root - INFO - Device details initialized: Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-16 18:18:37,000 - root - INFO - Testing database connection to 103.216.211.36:33975
+2025-05-16 18:18:37,145 - root - INFO - Database connection successful
+2025-05-16 18:18:37,147 - root - INFO - Loaded printer config: IP=192.168.0.251, Port=9100
+2025-05-16 18:18:37,168 - root - INFO - Printer connection successful (192.168.0.251:9100)
+2025-05-16 18:18:37,171 - root - INFO - Meal schedule configured: 10:09 to 20:09
+2025-05-16 18:18:37,172 - root - INFO - AuthEventMonitor initialized with endpoint: http://192.168.0.82:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-16 18:18:37,173 - root - INFO - Auth event monitoring started
+2025-05-16 18:18:37,224 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-16T18:18:20+05:30
+2025-05-16 18:18:37,225 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-16T18:18:20+05:30
+2025-05-16 18:18:37,226 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-16T18:18:25+05:30
+2025-05-16 18:18:37,226 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-16T18:18:26+05:30
+2025-05-16 18:18:37,226 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-16T18:18:26+05:30
+2025-05-16 18:18:37,227 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-16T18:18:30+05:30
+2025-05-16 18:18:37,227 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-16T18:18:34+05:30
+2025-05-16 18:18:37,432 - root - ERROR - Database insertion error: 1364 (HY000): Field 'CanteenMode' doesn't have a default value
+2025-05-16 18:18:37,683 - root - ERROR - Database insertion error: 1364 (HY000): Field 'CanteenMode' doesn't have a default value
+2025-05-16 18:18:39,327 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-16T18:18:39+05:30
+2025-05-16 18:18:39,350 - root - ERROR - Database insertion error: 1364 (HY000): Field 'CanteenMode' doesn't have a default value
+2025-05-16 18:18:39,613 - root - ERROR - Database insertion error: 1364 (HY000): Field 'CanteenMode' doesn't have a default value
+2025-05-16 18:19:37,168 - root - INFO - Printer connection successful (192.168.0.251:9100)
+2025-05-16 18:20:37,202 - root - INFO - Printer connection successful (192.168.0.251:9100)
+2025-05-16 18:21:37,206 - root - INFO - Printer connection successful (192.168.0.251:9100)
+2025-05-16 18:22:37,202 - root - INFO - Printer connection successful (192.168.0.251:9100)
+2025-05-16 18:23:37,186 - root - INFO - Printer connection successful (192.168.0.251:9100)
+2025-05-16 18:24:37,172 - root - INFO - Printer connection successful (192.168.0.251:9100)
+2025-05-16 18:25:37,209 - root - INFO - Printer connection successful (192.168.0.251:9100)
+2025-05-16 18:25:52,777 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-16T18:25:52+05:30
+2025-05-16 18:25:52,778 - root - INFO - New authentication event: Employee ID=1244, Name=ryan, Time=2025-05-16T18:25:52+05:30
+2025-05-16 18:25:53,988 - root - ERROR - Database insertion error: 1364 (HY000): Field 'CanteenMode' doesn't have a default value
+2025-05-16 18:25:58,038 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-16T18:25:57+05:30
+2025-05-16 18:26:37,203 - root - INFO - Printer connection successful (192.168.0.251:9100)
+2025-05-16 18:26:44,163 - root - ERROR - Connection error for 192.168.0.82:80. Device may be offline or unreachable.
+2025-05-16 18:27:06,593 - root - ERROR - Connection error for 192.168.0.82:80. Device may be offline or unreachable.
+2025-05-16 18:27:07,940 - root - ERROR - Connection error for 192.168.0.82:80. Device may be offline or unreachable.
+2025-05-16 18:27:08,973 - root - ERROR - Connection error for 192.168.0.82:80. Device may be offline or unreachable.
+2025-05-16 18:27:37,194 - root - INFO - Printer connection successful (192.168.0.251:9100)
+2025-05-16 18:28:37,200 - root - INFO - Printer connection successful (192.168.0.251:9100)
+2025-05-16 18:28:42,756 - asyncio - ERROR - Task was destroyed but it is pending!
+task: <Task pending name='Task-1' coro=<EzeeCanteenWindow.initialize_toggle_state() running at e:\Work\Actual-EzeCanteen\settings.py:315>>
+2025-05-16 18:28:42,759 - asyncio - ERROR - Task was destroyed but it is pending!
+task: <Task pending name='Task-2' coro=<EzeeCanteenWindow.load_settings() running at e:\Work\Actual-EzeCanteen\settings.py:445>>
+2025-05-16 18:28:42,759 - asyncio - ERROR - Task was destroyed but it is pending!
+task: <Task pending name='Task-3' coro=<EzeeCanteenWindow.initialize_toggle_state() running at e:\Work\Actual-EzeCanteen\settings.py:315>>
+2025-05-16 18:28:42,760 - asyncio - ERROR - Task was destroyed but it is pending!
+task: <Task pending name='Task-4' coro=<EzeeCanteenWindow.load_settings() running at e:\Work\Actual-EzeCanteen\settings.py:445>>
+2025-05-20 10:45:57,088 - root - INFO - EzeeCanteen application starting
+2025-05-20 10:45:57,114 - root - INFO - Getting device details for 192.168.0.82:80 with user: admin, password length: 10
+2025-05-20 10:45:57,157 - root - INFO - Successfully retrieved device details from 192.168.0.82:80
+2025-05-20 10:45:57,179 - root - INFO - Device info: Model=DS-K1T671MF, Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-20 10:45:57,179 - root - INFO - Device details initialized: Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-20 10:45:57,180 - root - INFO - Testing database connection to 103.216.211.36:33975
+2025-05-20 10:45:57,324 - root - INFO - Database connection successful
+2025-05-20 10:45:57,329 - root - INFO - Loaded printer config: IP=192.168.0.251, Port=9100
+2025-05-20 10:45:58,344 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-20 10:45:58,367 - root - INFO - Meal schedule configured: 10:09 to 20:09
+2025-05-20 10:45:58,368 - root - INFO - AuthEventMonitor initialized with endpoint: http://192.168.0.82:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-20 10:45:58,370 - root - INFO - Auth event monitoring started
+2025-05-20 10:45:58,414 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-20T10:45:53+05:30
+2025-05-20 10:45:58,414 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-20T10:45:53+05:30
+2025-05-20 10:45:58,755 - root - ERROR - Database insertion error: 1364 (HY000): Field 'CanteenMode' doesn't have a default value
+2025-05-20 10:45:59,480 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-20T10:45:58+05:30
+2025-05-20 10:46:59,381 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-20 10:47:48,094 - root - INFO - Auth event monitoring stopped
+2025-05-20 10:53:28,868 - root - INFO - EzeeCanteen application starting
+2025-05-20 10:53:28,873 - root - INFO - Getting device details for 192.168.0.82:80 with user: admin, password length: 10
+2025-05-20 10:53:28,902 - root - INFO - Successfully retrieved device details from 192.168.0.82:80
+2025-05-20 10:53:28,910 - root - INFO - Device info: Model=DS-K1T671MF, Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-20 10:53:28,910 - root - INFO - Device details initialized: Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-20 10:53:28,911 - root - INFO - Testing database connection to 103.216.211.36:33975
+2025-05-20 10:53:29,056 - root - INFO - Database connection successful
+2025-05-20 10:53:29,059 - root - INFO - Loaded printer config: IP=192.168.0.251, Port=9100
+2025-05-20 10:53:30,065 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-20 10:53:30,069 - root - INFO - Meal schedule configured: 10:09 to 20:09
+2025-05-20 10:53:30,070 - root - INFO - AuthEventMonitor initialized with endpoint: http://192.168.0.82:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-20 10:53:30,072 - root - INFO - Auth event monitoring started
+2025-05-20 10:53:38,431 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-20T10:53:37+05:30
+2025-05-20 10:53:38,433 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-20T10:53:37+05:30
+2025-05-20 10:53:42,592 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-20T10:53:42+05:30
+2025-05-20 10:54:31,077 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-20 10:54:40,912 - root - INFO - Auth event monitoring stopped
+2025-05-20 11:13:27,725 - root - INFO - EzeeCanteen application starting
+2025-05-20 11:13:27,731 - root - INFO - Getting device details for 192.168.0.82:80 with user: admin, password length: 10
+2025-05-20 11:13:27,777 - root - INFO - Successfully retrieved device details from 192.168.0.82:80
+2025-05-20 11:13:27,784 - root - INFO - Device info: Model=DS-K1T671MF, Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-20 11:13:27,785 - root - INFO - Device details initialized: Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-20 11:13:27,785 - root - INFO - Testing database connection to 103.216.211.36:33975
+2025-05-20 11:13:27,873 - mysql.connector - INFO - package: mysql.connector.plugins
+2025-05-20 11:13:27,873 - mysql.connector - INFO - plugin_name: mysql_native_password
+2025-05-20 11:13:27,875 - mysql.connector - INFO - AUTHENTICATION_PLUGIN_CLASS: MySQLNativePasswordAuthPlugin
+2025-05-20 11:13:27,974 - root - INFO - Database connection successful
+2025-05-20 11:13:27,976 - root - INFO - Loaded printer config: IP=192.168.0.251, Port=9100
+2025-05-20 11:13:28,992 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-20 11:13:28,994 - root - INFO - Meal schedule configured: 10:09 to 20:09
+2025-05-20 11:13:28,995 - root - INFO - AuthEventMonitor initialized with endpoint: http://192.168.0.82:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-20 11:13:28,996 - root - INFO - Auth event monitoring started
+2025-05-20 11:13:30,822 - root - INFO - Auth event monitoring stopped
+2025-05-20 11:17:50,940 - root - INFO - EzeeCanteen application starting
+2025-05-20 11:17:50,946 - root - INFO - Getting device details for 192.168.0.82:80 with user: admin, password length: 10
+2025-05-20 11:17:50,981 - root - INFO - Successfully retrieved device details from 192.168.0.82:80
+2025-05-20 11:17:50,991 - root - INFO - Device info: Model=DS-K1T671MF, Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-20 11:17:50,991 - root - INFO - Device details initialized: Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-20 11:17:50,992 - root - INFO - Testing database connection to 103.216.211.36:33975
+2025-05-20 11:17:51,115 - mysql.connector - INFO - package: mysql.connector.plugins
+2025-05-20 11:17:51,116 - mysql.connector - INFO - plugin_name: mysql_native_password
+2025-05-20 11:17:51,118 - mysql.connector - INFO - AUTHENTICATION_PLUGIN_CLASS: MySQLNativePasswordAuthPlugin
+2025-05-20 11:17:51,458 - root - INFO - Database connection successful
+2025-05-20 11:17:51,460 - root - INFO - Loaded printer config: IP=192.168.0.251, Port=9100
+2025-05-20 11:17:52,469 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-20 11:17:52,470 - root - INFO - Meal schedule configured: 10:09 to 20:09
+2025-05-20 11:17:52,471 - root - INFO - AuthEventMonitor initialized with endpoint: http://192.168.0.82:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-20 11:17:52,472 - root - INFO - Auth event monitoring started
+2025-05-20 11:17:57,688 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-20T11:17:56+05:30
+2025-05-20 11:17:57,689 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-20T11:17:56+05:30
+2025-05-20 11:18:02,886 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-20T11:18:01+05:30
+2025-05-20 11:18:03,918 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-20T11:18:02+05:30
+2025-05-20 11:18:03,919 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-20T11:18:02+05:30
+2025-05-20 11:18:06,000 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-20T11:18:04+05:30
+2025-05-20 11:18:07,040 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-20T11:18:05+05:30
+2025-05-20 11:18:08,102 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-20T11:18:06+05:30
+2025-05-20 11:18:09,157 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-20T11:18:07+05:30
+2025-05-20 11:18:13,373 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-20T11:18:11+05:30
+2025-05-20 11:18:28,046 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-20T11:18:13+05:30
+2025-05-20 11:18:28,046 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-20T11:18:15+05:30
+2025-05-20 11:18:32,165 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-20T11:18:16+05:30
+2025-05-20 11:18:33,214 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-20T11:18:17+05:30
+2025-05-20 11:18:33,215 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-20T11:18:18+05:30
+2025-05-20 11:18:35,368 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-20T11:18:23+05:30
+2025-05-20 11:18:44,781 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-20T11:18:43+05:30
+2025-05-20 11:18:44,782 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-20T11:18:43+05:30
+2025-05-20 11:18:45,832 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-20T11:18:44+05:30
+2025-05-20 11:18:46,889 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-20T11:18:45+05:30
+2025-05-20 11:18:47,918 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-20T11:18:46+05:30
+2025-05-20 11:18:53,103 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-20T11:18:51+05:30
+2025-05-20 11:18:53,501 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-20 11:19:01,682 - root - INFO - Auth event monitoring stopped
+2025-05-20 11:19:03,523 - asyncio - ERROR - Task was destroyed but it is pending!
+task: <Task pending name='Task-1' coro=<EzeeCanteenWindow.initialize_toggle_state() running at e:\Work\Actual-EzeCanteen\settings.py:417>>
+2025-05-20 11:19:03,525 - asyncio - ERROR - Task was destroyed but it is pending!
+task: <Task pending name='Task-2' coro=<EzeeCanteenWindow.load_settings() running at e:\Work\Actual-EzeCanteen\settings.py:555>>
+2025-05-20 11:19:03,528 - asyncio - ERROR - Task was destroyed but it is pending!
+task: <Task pending name='Task-3' coro=<EzeeCanteenWindow.initialize_toggle_state() running at e:\Work\Actual-EzeCanteen\settings.py:417>>
+2025-05-20 11:19:03,532 - asyncio - ERROR - Task was destroyed but it is pending!
+task: <Task pending name='Task-4' coro=<EzeeCanteenWindow.load_settings() running at e:\Work\Actual-EzeCanteen\settings.py:555>>
+2025-05-20 12:05:58,860 - root - INFO - EzeeCanteen application starting
+2025-05-20 12:05:58,869 - root - INFO - Getting device details for 192.168.0.82:80 with user: admin, password length: 10
+2025-05-20 12:05:58,901 - root - INFO - Successfully retrieved device details from 192.168.0.82:80
+2025-05-20 12:05:58,909 - root - INFO - Device info: Model=DS-K1T671MF, Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-20 12:05:58,909 - root - INFO - Device details initialized: Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-20 12:05:58,912 - root - INFO - Testing database connection to 103.216.211.36:33975
+2025-05-20 12:05:59,062 - root - INFO - Database connection successful
+2025-05-20 12:05:59,063 - root - INFO - Loaded printer config: IP=192.168.0.251, Port=9100
+2025-05-20 12:06:00,064 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-20 12:06:00,065 - root - INFO - Meal schedule configured: 10:09 to 20:09
+2025-05-20 12:06:00,066 - root - INFO - AuthEventMonitor initialized with endpoint: http://192.168.0.82:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-20 12:06:00,067 - root - INFO - Auth event monitoring started
+2025-05-20 12:06:06,341 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-20T12:06:05+05:30
+2025-05-20 12:06:06,342 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-20T12:06:05+05:30
+2025-05-20 12:06:07,983 - root - INFO - Auth event monitoring stopped
+2025-05-20 12:19:15,071 - root - INFO - EzeeCanteen application starting
+2025-05-20 12:19:15,079 - root - INFO - Getting device details for 192.168.0.82:80 with user: admin, password length: 10
+2025-05-20 12:19:15,098 - root - INFO - Successfully retrieved device details from 192.168.0.82:80
+2025-05-20 12:19:15,106 - root - INFO - Device info: Model=DS-K1T671MF, Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-20 12:19:15,107 - root - INFO - Device details initialized: Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-20 12:19:15,109 - root - INFO - Testing database connection to 103.216.211.36:33975
+2025-05-20 12:19:15,260 - root - INFO - Database connection successful
+2025-05-20 12:19:15,263 - root - INFO - Loaded printer config: IP=192.168.0.251, Port=9100
+2025-05-20 12:19:16,269 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-20 12:19:16,270 - root - INFO - Meal schedule configured: 10:09 to 20:09
+2025-05-20 12:19:16,270 - root - INFO - AuthEventMonitor initialized with endpoint: http://192.168.0.82:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-20 12:19:16,271 - root - INFO - Auth event monitoring started
+2025-05-20 12:19:16,324 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-20T12:19:01+05:30
+2025-05-20 12:19:16,325 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-20T12:19:01+05:30
+2025-05-20 12:19:16,325 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-20T12:19:04+05:30
+2025-05-20 12:19:16,325 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-20T12:19:09+05:30
+2025-05-20 12:19:16,325 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-20T12:19:14+05:30
+2025-05-20 12:19:21,496 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-20T12:19:20+05:30
+2025-05-20 12:19:21,497 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-20T12:19:20+05:30
+2025-05-20 12:19:26,695 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-20T12:19:25+05:30
+2025-05-20 12:19:33,976 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-20T12:19:33+05:30
+2025-05-20 12:19:35,005 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-20T12:19:33+05:30
+2025-05-20 12:19:39,126 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-20T12:19:38+05:30
+2025-05-20 12:19:43,247 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-20T12:19:42+05:30
+2025-05-20 12:19:43,247 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-20T12:19:42+05:30
+2025-05-20 12:19:47,436 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-20T12:19:46+05:30
+2025-05-20 12:19:52,647 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-20T12:19:51+05:30
+2025-05-20 12:36:26,610 - root - INFO - EzeeCanteen application starting
+2025-05-20 12:36:26,617 - root - INFO - Getting device details for 192.168.0.82:80 with user: admin, password length: 10
+2025-05-20 12:36:26,655 - root - INFO - Successfully retrieved device details from 192.168.0.82:80
+2025-05-20 12:36:26,665 - root - INFO - Device info: Model=DS-K1T671MF, Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-20 12:36:26,670 - root - INFO - Device details initialized: Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-20 12:36:26,670 - root - INFO - Testing database connection to 103.216.211.36:33975
+2025-05-20 12:36:26,862 - root - INFO - Database connection successful
+2025-05-20 12:36:26,868 - root - INFO - Loaded printer config: IP=192.168.0.251, Port=9100
+2025-05-20 12:36:27,883 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-20 12:36:27,885 - root - INFO - Meal schedule configured: 10:09 to 20:09
+2025-05-20 12:36:27,886 - root - INFO - AuthEventMonitor initialized with endpoint: http://192.168.0.82:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-20 12:36:27,887 - root - INFO - Auth event monitoring started
+2025-05-20 12:36:29,316 - root - INFO - Auth event monitoring stopped
+2025-05-20 12:42:22,049 - root - INFO - EzeeCanteen application starting
+2025-05-20 12:42:22,056 - root - INFO - Getting device details for 192.168.0.82:80 with user: admin, password length: 10
+2025-05-20 12:42:22,107 - root - INFO - Successfully retrieved device details from 192.168.0.82:80
+2025-05-20 12:42:22,115 - root - INFO - Device info: Model=DS-K1T671MF, Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-20 12:42:22,116 - root - INFO - Device details initialized: Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-20 12:42:22,116 - root - INFO - Testing database connection to 103.216.211.36:33975
+2025-05-20 12:42:22,259 - root - INFO - Database connection successful
+2025-05-20 12:42:22,260 - root - INFO - Loaded printer config: IP=192.168.0.251, Port=9100
+2025-05-20 12:42:23,271 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-20 12:42:23,274 - root - INFO - Meal schedule configured: 10:09 to 20:09
+2025-05-20 12:42:23,275 - root - INFO - AuthEventMonitor initialized with endpoint: http://192.168.0.82:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-20 12:42:23,278 - root - INFO - Auth event monitoring started
+2025-05-20 12:42:25,430 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-20T12:42:25+05:30
+2025-05-20 12:42:29,664 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-20T12:42:28+05:30
+2025-05-20 12:42:29,665 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-20T12:42:28+05:30
+2025-05-20 12:42:32,442 - asyncio - ERROR - Task was destroyed but it is pending!
+task: <Task pending name='Task-1' coro=<EzeeCanteenWindow.load_settings() running at e:\Work\Actual-EzeCanteen\settings.py:861> cb=[EzeeCanteenWindow.__init__.<locals>.<lambda>() at e:\Work\Actual-EzeCanteen\settings.py:152]>
+2025-05-20 12:42:32,443 - asyncio - ERROR - Task was destroyed but it is pending!
+task: <Task pending name='Task-2' coro=<EzeeCanteenWindow.initialize_toggle_state() running at e:\Work\Actual-EzeCanteen\settings.py:719> cb=[EzeeCanteenWindow.__init__.<locals>.<lambda>() at e:\Work\Actual-EzeCanteen\settings.py:153]>
+2025-05-20 12:42:32,444 - asyncio - ERROR - Task was destroyed but it is pending!
+task: <Task pending name='Task-3' coro=<EzeeCanteenWindow.test_fetch_devices() running at e:\Work\Actual-EzeCanteen\settings.py:1334>>
+2025-05-20 12:42:57,046 - root - INFO - EzeeCanteen application starting
+2025-05-20 12:42:57,052 - root - INFO - Getting device details for 192.168.0.82:80 with user: admin, password length: 10
+2025-05-20 12:42:57,093 - root - INFO - Successfully retrieved device details from 192.168.0.82:80
+2025-05-20 12:42:57,102 - root - INFO - Device info: Model=DS-K1T671MF, Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-20 12:42:57,103 - root - INFO - Device details initialized: Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-20 12:42:57,104 - root - INFO - Testing database connection to 103.216.211.36:33975
+2025-05-20 12:42:57,248 - root - INFO - Database connection successful
+2025-05-20 12:42:57,249 - root - INFO - Loaded printer config: IP=192.168.0.251, Port=9100
+2025-05-20 12:42:58,262 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-20 12:42:58,263 - root - INFO - Meal schedule configured: 10:09 to 20:09
+2025-05-20 12:42:58,264 - root - INFO - AuthEventMonitor initialized with endpoint: http://192.168.0.82:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-20 12:42:58,265 - root - INFO - Auth event monitoring started
+2025-05-20 12:42:58,296 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-20T12:42:28+05:30
+2025-05-20 12:42:58,297 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-20T12:42:28+05:30
+2025-05-20 12:42:58,297 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-20T12:42:33+05:30
+2025-05-20 12:42:58,597 - root - ERROR - Database insertion error: 1062 (23000): Duplicate entry '13-2025-05-20 12:42:28-payguru_canteen-192.168.0.82' for key 'PRIMARY'
+2025-05-20 12:43:03,566 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-20T12:43:02+05:30
+2025-05-20 12:43:03,568 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-20T12:43:02+05:30
+2025-05-20 12:43:08,798 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-20T12:43:07+05:30
+2025-05-20 12:43:59,298 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-20 12:44:59,297 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-20 12:45:53,507 - root - INFO - EzeeCanteen application starting
+2025-05-20 12:45:53,513 - root - INFO - Getting device details for 192.168.0.82:80 with user: admin, password length: 10
+2025-05-20 12:45:53,555 - root - INFO - Successfully retrieved device details from 192.168.0.82:80
+2025-05-20 12:45:53,565 - root - INFO - Device info: Model=DS-K1T671MF, Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-20 12:45:53,566 - root - INFO - Device details initialized: Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-20 12:45:53,567 - root - INFO - Testing database connection to 103.216.211.36:33975
+2025-05-20 12:45:53,709 - root - INFO - Database connection successful
+2025-05-20 12:45:53,710 - root - INFO - Loaded printer config: IP=192.168.0.251, Port=9100
+2025-05-20 12:45:54,715 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-20 12:45:54,718 - root - INFO - Meal schedule configured: 10:09 to 20:09
+2025-05-20 12:45:54,719 - root - INFO - AuthEventMonitor initialized with endpoint: http://192.168.0.82:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-20 12:45:54,721 - root - INFO - Auth event monitoring started
+2025-05-20 12:45:58,987 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-20T12:45:58+05:30
+2025-05-20 12:45:58,988 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-20T12:45:58+05:30
+2025-05-20 12:46:02,750 - asyncio - ERROR - Task was destroyed but it is pending!
+task: <Task pending name='Task-1' coro=<EzeeCanteenWindow.load_settings() running at e:\Work\Actual-EzeCanteen\settings.py:870> cb=[EzeeCanteenWindow.__init__.<locals>.<lambda>() at e:\Work\Actual-EzeCanteen\settings.py:153]>
+2025-05-20 12:46:02,751 - asyncio - ERROR - Task was destroyed but it is pending!
+task: <Task pending name='Task-2' coro=<EzeeCanteenWindow.initialize_toggle_state() running at e:\Work\Actual-EzeCanteen\settings.py:720> cb=[EzeeCanteenWindow.__init__.<locals>.<lambda>() at e:\Work\Actual-EzeCanteen\settings.py:154]>
+2025-05-20 12:47:34,098 - root - INFO - EzeeCanteen application starting
+2025-05-20 12:47:34,104 - root - INFO - Getting device details for 192.168.0.82:80 with user: admin, password length: 10
+2025-05-20 12:47:34,132 - root - INFO - Successfully retrieved device details from 192.168.0.82:80
+2025-05-20 12:47:34,140 - root - INFO - Device info: Model=DS-K1T671MF, Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-20 12:47:34,141 - root - INFO - Device details initialized: Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-20 12:47:34,141 - root - INFO - Testing database connection to 103.216.211.36:33975
+2025-05-20 12:47:34,288 - root - INFO - Database connection successful
+2025-05-20 12:47:34,289 - root - INFO - Loaded printer config: IP=192.168.0.251, Port=9100
+2025-05-20 12:47:35,296 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-20 12:47:35,299 - root - INFO - Meal schedule configured: 10:09 to 20:09
+2025-05-20 12:47:35,300 - root - INFO - AuthEventMonitor initialized with endpoint: http://192.168.0.82:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-20 12:47:35,303 - root - INFO - Auth event monitoring started
+2025-05-20 12:47:39,550 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-20T12:47:38+05:30
+2025-05-20 12:47:39,554 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-20T12:47:38+05:30
+2025-05-20 12:47:43,726 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-20T12:47:43+05:30
+2025-05-20 12:49:21,368 - root - INFO - EzeeCanteen application starting
+2025-05-20 12:49:21,374 - root - INFO - Getting device details for 192.168.0.82:80 with user: admin, password length: 10
+2025-05-20 12:49:21,391 - root - INFO - Successfully retrieved device details from 192.168.0.82:80
+2025-05-20 12:49:21,399 - root - INFO - Device info: Model=DS-K1T671MF, Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-20 12:49:21,401 - root - INFO - Device details initialized: Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-20 12:49:21,402 - root - INFO - Testing database connection to 103.216.211.36:33975
+2025-05-20 12:49:21,551 - root - INFO - Database connection successful
+2025-05-20 12:49:21,552 - root - INFO - Loaded printer config: IP=192.168.0.251, Port=9100
+2025-05-20 12:49:22,554 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-20 12:49:22,556 - root - INFO - Meal schedule configured: 10:09 to 20:09
+2025-05-20 12:49:22,557 - root - INFO - AuthEventMonitor initialized with endpoint: http://192.168.0.82:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-20 12:49:22,560 - root - INFO - Auth event monitoring started
+2025-05-20 12:49:22,608 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-20T12:48:56+05:30
+2025-05-20 12:49:25,794 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-20T12:49:24+05:30
+2025-05-20 12:49:25,795 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-20T12:49:24+05:30
+2025-05-20 12:49:29,733 - asyncio - ERROR - Task was destroyed but it is pending!
+task: <Task pending name='Task-1' coro=<EzeeCanteenWindow.load_settings() running at e:\Work\Actual-EzeCanteen\settings.py:870> cb=[EzeeCanteenWindow.__init__.<locals>.<lambda>() at e:\Work\Actual-EzeCanteen\settings.py:153]>
+2025-05-20 12:49:29,734 - asyncio - ERROR - Task was destroyed but it is pending!
+task: <Task pending name='Task-2' coro=<EzeeCanteenWindow.initialize_toggle_state() running at e:\Work\Actual-EzeCanteen\settings.py:720> cb=[EzeeCanteenWindow.__init__.<locals>.<lambda>() at e:\Work\Actual-EzeCanteen\settings.py:154]>
+2025-05-20 12:51:34,217 - root - INFO - EzeeCanteen application starting
+2025-05-20 12:51:34,224 - root - INFO - Getting device details for 192.168.0.82:80 with user: admin, password length: 10
+2025-05-20 12:51:34,256 - root - INFO - Successfully retrieved device details from 192.168.0.82:80
+2025-05-20 12:51:34,265 - root - INFO - Device info: Model=DS-K1T671MF, Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-20 12:51:34,265 - root - INFO - Device details initialized: Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-20 12:51:34,266 - root - INFO - Testing database connection to 103.216.211.36:33975
+2025-05-20 12:51:34,408 - root - INFO - Database connection successful
+2025-05-20 12:51:34,409 - root - INFO - Loaded printer config: IP=192.168.0.251, Port=9100
+2025-05-20 12:51:35,410 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-20 12:51:35,412 - root - INFO - Meal schedule configured: 10:09 to 20:09
+2025-05-20 12:51:35,414 - root - INFO - AuthEventMonitor initialized with endpoint: http://192.168.0.82:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-20 12:51:35,416 - root - INFO - Auth event monitoring started
+2025-05-20 12:51:35,468 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-20T12:51:21+05:30
+2025-05-20 12:51:38,610 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-20T12:51:38+05:30
+2025-05-20 12:51:38,611 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-20T12:51:38+05:30
+2025-05-20 12:51:41,988 - asyncio - ERROR - Task was destroyed but it is pending!
+task: <Task pending name='Task-1' coro=<EzeeCanteenWindow.load_settings() running at e:\Work\Actual-EzeCanteen\settings.py:870> cb=[EzeeCanteenWindow.__init__.<locals>.<lambda>() at e:\Work\Actual-EzeCanteen\settings.py:153]>
+2025-05-20 12:51:41,990 - asyncio - ERROR - Task was destroyed but it is pending!
+task: <Task pending name='Task-2' coro=<EzeeCanteenWindow.initialize_toggle_state() running at e:\Work\Actual-EzeCanteen\settings.py:720> cb=[EzeeCanteenWindow.__init__.<locals>.<lambda>() at e:\Work\Actual-EzeCanteen\settings.py:154]>
+2025-05-20 12:51:58,067 - root - INFO - EzeeCanteen application starting
+2025-05-20 12:51:58,072 - root - INFO - Getting device details for 192.168.0.82:80 with user: admin, password length: 10
+2025-05-20 12:51:58,089 - root - INFO - Successfully retrieved device details from 192.168.0.82:80
+2025-05-20 12:51:58,096 - root - INFO - Device info: Model=DS-K1T671MF, Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-20 12:51:58,098 - root - INFO - Device details initialized: Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-20 12:51:58,099 - root - INFO - Testing database connection to 103.216.211.36:33975
+2025-05-20 12:51:58,247 - root - INFO - Database connection successful
+2025-05-20 12:51:58,248 - root - INFO - Loaded printer config: IP=192.168.0.251, Port=9100
+2025-05-20 12:51:59,252 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-20 12:51:59,253 - root - INFO - Meal schedule configured: 10:09 to 20:09
+2025-05-20 12:51:59,254 - root - INFO - AuthEventMonitor initialized with endpoint: http://192.168.0.82:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-20 12:51:59,255 - root - INFO - Auth event monitoring started
+2025-05-20 12:51:59,292 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-20T12:51:38+05:30
+2025-05-20 12:51:59,292 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-20T12:51:38+05:30
+2025-05-20 12:51:59,293 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-20T12:51:43+05:30
+2025-05-20 12:51:59,612 - root - ERROR - Database insertion error: 1062 (23000): Duplicate entry '13-2025-05-20 12:51:38-payguru_canteen-192.168.0.82' for key 'PRIMARY'
+2025-05-20 12:52:02,447 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-20T12:52:01+05:30
+2025-05-20 12:52:02,447 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-20T12:52:01+05:30
+2025-05-20 12:52:06,625 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-20T12:52:06+05:30
+2025-05-20 12:53:00,261 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-20 12:53:21,582 - root - INFO - Auth event monitoring stopped
+2025-05-20 12:54:05,431 - root - INFO - EzeeCanteen application starting
+2025-05-20 12:54:05,436 - root - INFO - Getting device details for 192.168.0.82:80 with user: admin, password length: 10
+2025-05-20 12:54:05,478 - root - INFO - Successfully retrieved device details from 192.168.0.82:80
+2025-05-20 12:54:05,480 - root - INFO - Device info: Model=DS-K1T671MF, Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-20 12:54:05,481 - root - INFO - Device details initialized: Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-20 12:54:05,482 - root - INFO - Testing database connection to 103.216.211.36:33975
+2025-05-20 12:54:05,626 - root - INFO - Database connection successful
+2025-05-20 12:54:05,629 - root - INFO - Loaded printer config: IP=192.168.0.251, Port=9100
+2025-05-20 12:54:06,634 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-20 12:54:06,635 - root - INFO - Meal schedule configured: 10:09 to 20:09
+2025-05-20 12:54:06,635 - root - INFO - AuthEventMonitor initialized with endpoint: http://192.168.0.82:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-20 12:54:06,636 - root - INFO - Auth event monitoring started
+2025-05-20 12:54:10,852 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-20T12:54:09+05:30
+2025-05-20 12:54:10,853 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-20T12:54:09+05:30
+2025-05-20 12:54:15,057 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-20T12:54:14+05:30
+2025-05-20 12:55:07,650 - root - WARNING - Printer connection failed (192.168.0.251:9100)
