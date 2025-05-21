@@ -23,6 +23,12 @@ try:
 except ImportError:
     print("Could not import EzeeCanteen from timeBase.py")
 
+# Import the EzeeCanteenApp class from CanteenSettings.py
+try:
+    from CanteenSettings import EzeeCanteenApp
+except ImportError:
+    print("Could not import EzeeCanteenApp from CanteenSettings.py")
+
 class LoadingOverlay(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -836,7 +842,7 @@ class EzeeCanteenWindow(QMainWindow):
                             """)
             except Exception as e:
                 pass  # Silently handle errors to prevent console spam
-    
+
     async def load_settings(self):
         print("\n========== STARTING LOAD SETTINGS ==========")
         try:
@@ -981,6 +987,7 @@ class EzeeCanteenWindow(QMainWindow):
             device_layout.setContentsMargins(2, 1, 2, 1)  # Further reduced margins
             device_layout.setSpacing(4)  # Reduced spacing between info and button
             
+
             # Create info widget to display device details
             info_widget = QWidget()
             info_layout = QVBoxLayout(info_widget)
@@ -1323,7 +1330,62 @@ class EzeeCanteenWindow(QMainWindow):
     
     def meal_settings(self):
         print("Navigating to canteen settings")
-        # Implement navigation logic
+        
+        # Save current window geometry
+        self.saved_geometry = self.geometry()
+        
+        try:
+            # Create the EzeeCanteenApp instance
+            canteen_app = EzeeCanteenApp()
+            
+            # IMPORTANT: Disconnect the default "go_back" slot and connect our custom function
+            # Find the back button in the UI
+            back_buttons = canteen_app.findChildren(QPushButton)
+            for btn in back_buttons:
+                if btn.text() == "Back":
+                    print("Found Back button in CanteenSettings, reconnecting...")
+                    # Disconnect any existing connections
+                    try:
+                        btn.clicked.disconnect()
+                    except Exception:
+                        pass
+                    # Connect directly to our return function
+                    btn.clicked.connect(self.return_from_canteen_settings)
+            
+            # Store old central widget
+            self.old_central_widget = self.centralWidget()
+            
+            # Set canteen app as central widget
+            self.setCentralWidget(canteen_app)
+            
+        except Exception as e:
+            print(f"Error loading Canteen Settings view: {e}")
+            import traceback
+            traceback.print_exc()
+
+    def return_from_canteen_settings(self):
+        # Remove the canteen settings view
+        canteen_view = self.centralWidget()
+        if canteen_view:
+            canteen_view.setParent(None)
+        
+        # Recreate the central widget and UI
+        self.central_widget = QWidget()
+        self.setCentralWidget(self.central_widget)
+        self.main_layout = QVBoxLayout(self.central_widget)
+        self.main_layout.setContentsMargins(32, 32, 32, 32)
+        self.central_widget.setStyleSheet("background-color: #1f2937; color: white; font-family: Arial, sans-serif;")
+        
+        # Re-initialize the UI
+        self.init_ui()
+        
+        # Restore original geometry
+        if hasattr(self, 'saved_geometry'):
+            self.setGeometry(self.saved_geometry)
+        
+        # Explicitly repopulate the printers and devices with existing data
+        self.populate_printers()    
+        self.populate_devices()
     
     async def clear_cache(self):
         self.loading_overlay = LoadingOverlay(self)
