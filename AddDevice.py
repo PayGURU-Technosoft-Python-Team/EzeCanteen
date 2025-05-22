@@ -87,13 +87,6 @@ class EzeeCanteenDeviceForm(QMainWindow):
         self.printer_combo.setStyleSheet("background-color: #1e293b; padding: 8px; border-radius: 4px; margin-bottom: 10px;")
         form_layout.addWidget(self.printer_combo)
         
-        # Printer IP field
-        form_layout.addWidget(QLabel("Printer IP"))
-        self.printer_ip = QLineEdit()
-        self.printer_ip.setPlaceholderText("192.168.100.101")
-        self.printer_ip.setStyleSheet("background-color: #1e293b; padding: 8px; border-radius: 4px; margin-bottom: 10px;")
-        form_layout.addWidget(self.printer_ip)
-        
         # Show on Live field
         live_label = QLabel("Enable Device")
         form_layout.addWidget(live_label)
@@ -200,6 +193,40 @@ class EzeeCanteenDeviceForm(QMainWindow):
         except mysql.connector.Error as err:
             return 1  # Default to 1 if error
     
+    def get_printer_ip(self, printer_name):
+        """Get printer IP address from database by printer name"""
+        if not printer_name or printer_name == "Select a printer":
+            return None
+            
+        try:
+            conn = self.db_connect()
+            if not conn:
+                return None
+                
+            cursor = conn.cursor()
+            
+            # Query to get printer IP by name
+            sql = "SELECT IP FROM configh WHERE DeviceType = 'Printer' AND DeviceNumber = %s"
+            
+            # Extract printer number from the name (assuming format: "Printer X")
+            try:
+                printer_num = int(printer_name.split()[-1])
+                cursor.execute(sql, (printer_num,))
+                result = cursor.fetchone()
+                
+                if result:
+                    return result[0]
+            except (ValueError, IndexError):
+                pass
+                
+            return None
+        except mysql.connector.Error as err:
+            QMessageBox.warning(self, "Database Warning", f"Failed to fetch printer IP: {str(err)}")
+            return None
+        finally:
+            if conn:
+                conn.close()
+    
     def save_device(self):
         """Save the device information to the database and emit signal"""
         device_type = self.device_type  # Use the stored device type instead of reading from a field
@@ -208,7 +235,6 @@ class EzeeCanteenDeviceForm(QMainWindow):
         username = self.username.text().strip()
         password = self.password.text().strip()
         location = self.location.text().strip()
-        printer_ip = self.printer_ip.text().strip()
         
         # Validation
         if not device_ip or not device_port:
@@ -221,8 +247,10 @@ class EzeeCanteenDeviceForm(QMainWindow):
         
         # Get selected printer
         selected_printer = None
+        printer_ip = None
         if self.printer_combo.currentIndex() > 0:
             selected_printer = self.printer_combo.currentText()
+            printer_ip = self.get_printer_ip(selected_printer)
         
         try:
             # Connect to database
@@ -266,7 +294,7 @@ class EzeeCanteenDeviceForm(QMainWindow):
                 formatted_now,  # Pass the same timestamp for both encryption and storage
                 enable_value,
                 formatted_now,  # CreatedDateTime field
-                printer_ip
+                printer_ip      # This will be None if no printer selected
             )
             
             cursor.execute(sql, values)
@@ -300,7 +328,6 @@ class EzeeCanteenDeviceForm(QMainWindow):
             self.username.clear()
             self.password.clear()
             self.location.clear()
-            self.printer_ip.clear()
             self.enable_radio.setChecked(True)
             
         except mysql.connector.Error as err:

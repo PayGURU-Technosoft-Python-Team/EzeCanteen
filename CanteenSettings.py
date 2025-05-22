@@ -154,14 +154,47 @@ class EzeeCanteenApp(QMainWindow):
         add_row_btn.clicked.connect(self.add_row)
         
         save_changes_btn = QPushButton("Save Changes")
+        # save_changes_btn.setStyleSheet(
+        #     "background-color: #10B981; border-radius: 4px; padding: 10px 20px; font-size: 14px; font-weight: bold;"
+        # )
         save_changes_btn.setStyleSheet(
-            "background-color: #10B981; border-radius: 4px; padding: 10px 20px; font-size: 14px; font-weight: bold;"
+            "QPushButton {"
+            "    background-color: #10B981;"
+            "    border-radius: 4px;"
+            "    padding: 10px 20px;"
+            "    font-size: 14px;"
+            "    font-weight: bold;"
+            "    color: white;"
+            "}"
+            "QPushButton:hover {"
+            "    background-color: #0DA271;"
+            "}"
+            "QPushButton:pressed {"
+            "    background-color: #0C8A61;"
+            "    padding-top: 11px;"
+            "    padding-bottom: 9px;"
+            "}"
         )
+
         save_changes_btn.clicked.connect(self.save_changes)
         
         back_btn = QPushButton("Back")
         back_btn.setStyleSheet(
-            "background-color: #F59E0B; border-radius: 4px; padding: 10px 20px; font-size: 14px; font-weight: bold;"
+            "QPushButton {"
+            "    background-color: #F59E0B;"
+            "    border-radius: 4px;"
+            "    padding: 10px 20px;"
+            "    font-size: 14px;"
+            "    font-weight: bold;"
+            "}"
+            "QPushButton:hover {"
+            "    background-color:rgb(185, 122, 12);"
+            "}"
+            "QPushButton:pressed {"
+            "    background-color:rgb(231, 136, 12);"
+            "    padding-top: 11px;"
+            "    padding-bottom: 9px;"
+            "}"
         )
         back_btn.clicked.connect(self.go_back)
         

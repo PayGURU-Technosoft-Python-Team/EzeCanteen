@@ -1,11 +1,20 @@
 import sys
 import json
 import os
+import mysql.connector
+from datetime import datetime
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
                             QLabel, QLineEdit, QComboBox, QRadioButton, QTextEdit,
                             QPushButton, QMessageBox, QFrame, QButtonGroup)
 from PyQt5.QtCore import Qt, QSettings
 from PyQt5.QtGui import QFont
+
+# Database configuration
+DB_HOST = "103.216.211.36"
+DB_USER = "pgcanteen"
+DB_PORT = 33975
+DB_PASS = "L^{Z,8~zzfF9(nd8"
+DB_NAME = "payguru_canteen"
 
 class PrinterSetupWindow(QMainWindow):
     def __init__(self):
@@ -208,11 +217,42 @@ class PrinterSetupWindow(QMainWindow):
             
         return True
     
+    def db_connect(self):
+        """Connect to MySQL database"""
+        try:
+            conn = mysql.connector.connect(
+                host=DB_HOST,
+                user=DB_USER,
+                port=DB_PORT,
+                password=DB_PASS,
+                database=DB_NAME
+            )
+            return conn
+        except mysql.connector.Error as err:
+            QMessageBox.critical(self, "Database Error", f"Failed to connect to database: {str(err)}")
+            return None
+            
+    def get_next_device_number(self, cursor, device_type):
+        """Get the next available device number"""
+        try:
+            cursor.execute("SELECT MAX(DeviceNumber) FROM configh WHERE DeviceType = %s", (device_type,))
+            result = cursor.fetchone()
+            max_num = result[0] if result[0] is not None else 0
+            return max_num + 1
+        except mysql.connector.Error as err:
+            return 1  # Default to 1 if error
+    
     def save_printer(self):
         if not self.validate_form():
             return
             
         # Get form data
+        printer_name = self.printer_name.text().strip()
+        printer_ip = self.printer_ip.text().strip()
+        printer_port = self.printer_port.text().strip()
+        printer_type = self.printer_type.currentText().lower()
+        font_size = self.font_size.currentData()
+        
         header = {
             "enable": self.enable_header.isChecked(),
             "disable": self.disable_header.isChecked(),
@@ -225,29 +265,92 @@ class PrinterSetupWindow(QMainWindow):
             "text": self.token_footer.toPlainText()
         }
         
-        new_printer = {
-            "name": self.printer_name.text().strip(),
-            "type": self.printer_type.currentText().lower(),
-            "ip": self.printer_ip.text().strip(),
-            "port": self.printer_port.text().strip(),
-            "fontSize": self.font_size.currentData(),
-            "header": header,
-            "footer": footer
-        }
-        
-        # Load current settings
-        settings = self.load_settings()
-        
-        # Add new printer
-        if "printers" not in settings:
-            settings["printers"] = []
-        settings["printers"].append(new_printer)
-        
-        # Save settings
-        if self.save_settings(settings):
-            QMessageBox.information(self, "Success", "Printer added successfully")
-        else:
-            QMessageBox.critical(self, "Error", "Failed to save printer settings")
+        try:
+            # Connect to database
+            conn = self.db_connect()
+            if not conn:
+                return
+            
+            cursor = conn.cursor()
+            
+            # Get next device number
+            device_number = self.get_next_device_number(cursor, printer_name)
+            
+            # Current timestamp
+            now = datetime.now()
+            formatted_now = now.strftime('%Y-%m-%d %H:%M:%S')
+            
+            # Default username/password for printers
+            username = "admin"
+            password = "admin"
+            
+            # Prepare SQL statement
+            sql = """
+            INSERT INTO configh (
+                DeviceType, DeviceNumber, IP, Port, DeviceLocation, ComUser, 
+                comKey, Enable, CreatedDateTime, DevicePrinterIP
+            ) VALUES (
+                %s, %s, %s, %s, %s, %s, 
+                AES_ENCRYPT(%s, SHA2(CONCAT('pg2175', %s), 512)), 
+                %s, %s, %s
+            )
+            """
+            
+            # Set enable value - Enable by default
+            enable_value = 'Y'
+            
+            # Convert header/footer to location text
+            location = f"FontSize:{font_size}"
+            if header["enable"]:
+                location += f"|Header:{header['text']}"
+            if footer["enable"]:
+                location += f"|Footer:{footer['text']}"
+            
+            # Execute SQL with values
+            values = (
+                printer_name,  # DeviceType
+                device_number,
+                printer_ip,    # IP
+                printer_port,
+                location,
+                username,
+                password,
+                formatted_now,  # Pass timestamp for encryption
+                enable_value,
+                formatted_now,  # CreatedDateTime field
+                ""  # DevicePrinterIP - empty for printers
+            )
+            
+            cursor.execute(sql, values)
+            conn.commit()
+            
+            # Also save to JSON for compatibility
+            new_printer = {
+                "name": printer_name,
+                "type": printer_type,
+                "ip": printer_ip,
+                "port": printer_port,
+                "fontSize": font_size,
+                "header": header,
+                "footer": footer
+            }
+            self.save_to_json(new_printer)
+            
+            QMessageBox.information(self, "Success", "Printer saved successfully to database!")
+            
+            # Clear form fields
+            self.printer_name.clear()
+            self.printer_ip.clear()
+            self.printer_port.clear()
+            self.font_size.setCurrentIndex(0)
+            self.token_header.clear()
+            self.token_footer.clear()
+            
+        except mysql.connector.Error as err:
+            QMessageBox.critical(self, "Database Error", f"Failed to save printer: {str(err)}")
+        finally:
+            if conn:
+                conn.close()
     
     def load_settings(self):
         try:
@@ -274,7 +377,19 @@ class PrinterSetupWindow(QMainWindow):
         except Exception as e:
             print(f"Error saving settings: {e}")
             return False
-    
+            
+    def save_to_json(self, new_printer):
+        """Save the printer information to JSON file for compatibility"""
+        # Load current settings
+        settings = self.load_settings()
+        
+        # Add new printer
+        if "printers" not in settings:
+            settings["printers"] = []
+        settings["printers"].append(new_printer)
+        
+        # Save settings
+        self.save_settings(settings)
 
 
 if __name__ == "__main__":

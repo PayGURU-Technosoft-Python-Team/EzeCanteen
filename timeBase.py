@@ -24,7 +24,7 @@ from print import print_slip  # Import print_slip function
 from PyQt5 import sip
 
 # Default device configuration (will be used if DB fetch fails)
-IP = "192.168.0.872"
+IP = "192.168.0.82"
 PORT = 80
 USERNAME = "admin"
 PASSWORD = "a1234@4321"
@@ -37,10 +37,59 @@ DB_PASS = "L^{Z,8~zzfF9(nd8"
 DB_NAME = "payguru_canteen"
 DB_TABLE = "sequentiallog"
 
-# Function to fetch device configuration from the database
+# Dictionary to store device configurations and their associated printers
+DEVICES = {}
+
+# Function to modify user begin time
+def modify_user_begin_time(base_url, username, password, employee_no, begin_time, employee_name=None):
+    """Update a user's begin time on the device"""
+    url = f"{base_url}/ISAPI/AccessControl/UserInfo/Modify?format=json"
+
+    # Payload to update only the beginTime
+    payload = {
+        "UserInfo": {
+            "employeeNo": employee_no,
+            "name": employee_name if employee_name else employee_no,  # Use the provided name or employee number
+            "Valid": {
+                "enable": True,
+                "beginTime": begin_time,
+                "timeType": "local"
+            },
+            "addUser": True,
+            "checkUser": False
+        }
+    }
+
+    headers = {'Content-Type': 'application/json'}
+    auth = HTTPDigestAuth(username, password)
+
+    try:
+        response = requests.put(
+            url,
+            auth=auth,
+            headers=headers,
+            data=json.dumps(payload),
+            timeout=10
+        )
+
+        logging.info(f"API response for updating begin time for employee {employee_no}: Status {response.status_code}")
+        
+        try:
+            return response.json()
+        except ValueError:
+            return {
+                "error": "Invalid JSON response",
+                "status_code": response.status_code,
+                "text": response.text[:200]  # Limit text length for logging
+            }
+    except Exception as e:
+        logging.error(f"Error updating begin time for employee {employee_no}: {str(e)}")
+        return {"error": str(e)}
+
+# Function to fetch device configurations from the database
 def fetch_device_config():
-    """Fetch device configuration from the database"""
-    global IP, PORT, USERNAME, PASSWORD
+    """Fetch device configurations from the database"""
+    global DEVICES, IP, PORT, USERNAME, PASSWORD
     
     try:
         # Connect to the database
@@ -55,53 +104,97 @@ def fetch_device_config():
         # Create a cursor
         cursor = conn.cursor(dictionary=True)
         
-        # Fetch the default device configuration with password decryption
-        # Using the decryption method specified
+        # Fetch authentication devices (DeviceType = 'Device') with password decryption
         query = """
-            SELECT IP, Port, DeviceLocation, ComUser, 
+            SELECT DeviceNumber, IP, Port, DeviceLocation, ComUser, DevicePrinterIP,
                    AES_DECRYPT(comKey, SHA2(CONCAT('pg2175', CreatedDateTime), 512)) as Pwd
             FROM configh
-            WHERE DeviceType != 'Printer' AND Enable = 'Y'
+            WHERE DeviceType = 'Device' AND Enable = 'Y'
             ORDER BY DeviceNumber
-            LIMIT 1
         """
         
         cursor.execute(query)
-        device = cursor.fetchone()
+        auth_devices = cursor.fetchall()
         
-        if device:
-            # Update global variables with values from database
-            IP = device['IP']
-            PORT = device['Port'] if device['Port'] else 80  # Default to 80 if null
-            USERNAME = device['ComUser'] if device['ComUser'] else "admin"  # Default values if null
+        # Fetch printers (DeviceType = 'Printer')
+        printer_query = """
+            SELECT DeviceNumber, IP, Port
+            FROM configh
+            WHERE DeviceType = 'Printer' AND Enable = 'Y'
+        """
+        
+        cursor.execute(printer_query)
+        printers = {printer['IP']: printer for printer in cursor.fetchall()}
+        
+        if auth_devices:
+            # Process each authentication device
+            for device in auth_devices:
+                device_ip = device['IP']
+                device_port = device['Port'] if device['Port'] else 80
+                device_user = device['ComUser'] if device['ComUser'] else "admin"
+                device_pwd = None
+                
+                # Handle the decrypted password
+                if device['Pwd'] is not None:
+                    try:
+                        # Convert bytes to string if needed
+                        if isinstance(device['Pwd'], bytes):
+                            device_pwd = device['Pwd'].decode('utf-8')
+                        else:
+                            device_pwd = str(device['Pwd'])
+                    except Exception as e:
+                        logging.error(f"Error decoding password for device {device_ip}: {e}")
+                        device_pwd = PASSWORD  # Use default if decoding fails
+                else:
+                    device_pwd = PASSWORD  # Use default if no password
+                
+                # Find associated printer from DevicePrinterIP or use default
+                printer_ip = device['DevicePrinterIP']
+                printer_port = 9100  # Default printer port
+                
+                # If printer exists in our printer table, use its port
+                if printer_ip in printers:
+                    printer_port = printers[printer_ip]['Port'] if printers[printer_ip]['Port'] else 9100
+                
+                # Store device configuration with its printer
+                DEVICES[device_ip] = {
+                    'device': {
+                        'ip': device_ip,
+                        'port': device_port,
+                        'user': device_user,
+                        'password': device_pwd,
+                        'location': device['DeviceLocation']
+                    },
+                    'printer': {
+                        'ip': printer_ip,
+                        'port': printer_port
+                    }
+                }
+                
+                logging.info(f"Loaded device configuration: {device_ip}:{device_port} -> Printer: {printer_ip}:{printer_port}")
             
-            # Handle the decrypted password - it might be bytes or None
-            if device['Pwd'] is not None:
-                try:
-                    # Convert bytes to string if needed
-                    if isinstance(device['Pwd'], bytes):
-                        PASSWORD = device['Pwd'].decode('utf-8')
-                    else:
-                        PASSWORD = str(device['Pwd'])
-                except Exception as e:
-                    logging.error(f"Error decoding password: {e}")
-                    # Keep default password if decoding fails
+            # Set default device to the first one for backward compatibility
+            if DEVICES:
+                first_device = next(iter(DEVICES.values()))
+                IP = first_device['device']['ip']
+                PORT = first_device['device']['port']
+                USERNAME = first_device['device']['user']
+                PASSWORD = first_device['device']['password']
+                logging.info(f"Set default device to {IP}:{PORT}")
             
-            logging.info(f"Loaded device configuration from database: {IP}:{PORT}")
-            print(f"Device configuration loaded from database: {IP}:{PORT}")
         else:
-            logging.warning("No enabled device found in database, using default values")
+            logging.warning("No enabled devices found in database, using default values")
         
         # Close cursor and connection
         cursor.close()
         conn.close()
         
     except mysql.connector.Error as err:
-        logging.error(f"Database error: {err}")
-        print(f"Error fetching device configuration: {err}")
+        logging.error(f"Database error while fetching device configurations: {err}")
+        print(f"Error fetching device configurations: {err}")
         print("Using default device configuration")
     except Exception as e:
-        logging.error(f"Unexpected error loading device configuration: {e}")
+        logging.error(f"Unexpected error loading device configurations: {e}")
         print(f"Unexpected error: {e}")
         print("Using default device configuration")
 
@@ -116,19 +209,28 @@ if not os.path.exists(TEMP_DIR):
 def print_server_addresses():
     """Prints all server addresses used in the application"""
     print("\n===== SERVER ADDRESSES =====")
-    print(f"Device Server: {IP}:{PORT}")
     print(f"Database Server: {DB_HOST}:{DB_PORT}")
     
-    # Try to get printer IP from appSettings.json
-    try:
-        with open('appSettings.json', 'r') as f:
-            app_settings = json.load(f)
-            printer_config = app_settings.get('PrinterConfig', {})
-            printer_ip = printer_config.get('IP', "192.168.0.251")
-            printer_port = printer_config.get('Port', 9100)
-            print(f"Printer Server: {printer_ip}:{printer_port}")
-    except Exception as e:
-        print(f"Printer Server: Unknown (Error: {e})")
+    # Print all device and printer configurations
+    if DEVICES:
+        print("\nConfigured Devices:")
+        for device_ip, config in DEVICES.items():
+            print(f"  Device: {device_ip}:{config['device']['port']} ({config['device']['location'] or 'No location'})")
+            print(f"  Printer: {config['printer']['ip']}:{config['printer']['port']}")
+            print("")
+    else:
+        print(f"\nUsing default device: {IP}:{PORT}")
+        
+        # Try to get printer IP from appSettings.json
+        try:
+            with open('appSettings.json', 'r') as f:
+                app_settings = json.load(f)
+                printer_config = app_settings.get('PrinterConfig', {})
+                printer_ip = printer_config.get('IP', "192.168.0.251")
+                printer_port = printer_config.get('Port', 9100)
+                print(f"Default Printer: {printer_ip}:{printer_port}")
+        except Exception as e:
+            print(f"Default Printer: Unknown (Error: {e})")
     
     print("===========================\n")
 
@@ -219,7 +321,7 @@ class TimeDisplay(QLabel):
         self.setText(f"{current_time}\n{current_date}")
 
 class AuthEventMonitor(QThread):
-    def __init__(self, communicator):
+    def __init__(self, communicator, device_ip=None):
         super().__init__()
         self.communicator = communicator
         self.running = True
@@ -245,11 +347,24 @@ class AuthEventMonitor(QThread):
             self.from_time_str = ''
             self.to_time_str = ''
         
-        # Use the global configuration
-        self.ip = IP
-        self.port = PORT
-        self.username = USERNAME
-        self.password = PASSWORD
+        # Get device configuration
+        self.device_ip = device_ip
+        
+        if device_ip and device_ip in DEVICES:
+            # Use the specified device configuration
+            device_config = DEVICES[device_ip]['device']
+            self.ip = device_config['ip']
+            self.port = device_config['port']
+            self.username = device_config['user']
+            self.password = device_config['password']
+            logging.info(f"AuthEventMonitor using device: {self.ip}:{self.port}")
+        else:
+            # Use the global configuration (default device)
+            self.ip = IP
+            self.port = PORT
+            self.username = USERNAME
+            self.password = PASSWORD
+            logging.info(f"AuthEventMonitor using default device: {self.ip}:{self.port}")
         
         # URL for access control events
         self.url = f"http://{self.ip}:{self.port}/ISAPI/AccessControl/AcsEvent?format=json"
@@ -271,8 +386,12 @@ class AuthEventMonitor(QThread):
         logging.info("Auth event monitoring started")
         while self.running:
             if not self.check_time_range():
-                # Sleep for a minute before checking the time range again
-                time.sleep(60)
+                # Sleep for shorter intervals to respond to stop signals more quickly
+                for _ in range(6):  # 6 x 10 seconds = 1 minute total
+                    if not self.running:
+                        logging.info("Auth event monitoring stopping during sleep")
+                        return
+                    time.sleep(1)
                 continue
                 
             try:
@@ -353,10 +472,17 @@ class AuthEventMonitor(QThread):
     
     def stop(self):
         """Stop the monitoring thread"""
-        logging.info("Auth event monitoring stopped")
+        logging.info("Auth event monitoring stopping...")
         self.running = False
-        self.quit()
-        self.wait()
+        
+        # Wait for thread to finish, but with timeout
+        if self.isRunning():
+            if not self.wait(3000):  # 3 second timeout
+                logging.warning("Auth event monitor did not stop gracefully, forcing termination")
+                self.terminate()
+                self.wait()
+        
+        logging.info("Auth event monitoring stopped")
 
 class AuthEventItem(QFrame):
     def __init__(self, event_data):
@@ -568,10 +694,32 @@ class AuthEventItem(QFrame):
             unique_id = str(uuid.uuid4())
             filename = os.path.join(TEMP_DIR, f"image_{unique_id}.jpg")
             
-            # Use requests with digest authentication instead of urllib
+            # Find appropriate credentials for authentication
+            # Extract device IP from URL if possible
+            device_ip = None
+            if url and "://" in url:
+                try:
+                    from urllib.parse import urlparse
+                    parsed_url = urlparse(url)
+                    device_ip = parsed_url.netloc.split(':')[0]
+                except Exception as e:
+                    logging.error(f"Error parsing URL to get device IP: {e}")
+            
+            # Get authentication credentials
+            username = USERNAME
+            password = PASSWORD
+            
+            # If we have device-specific credentials, use them
+            if device_ip and DEVICES and device_ip in DEVICES:
+                device_config = DEVICES[device_ip]['device']
+                username = device_config['user']
+                password = device_config['password']
+                logging.info(f"Using device-specific credentials for {device_ip} to fetch image")
+            
+            # Use requests with digest authentication
             response = requests.get(
                 url,
-                auth=HTTPDigestAuth(USERNAME, PASSWORD),
+                auth=HTTPDigestAuth(username, password),
                 timeout=10
             )
             
@@ -641,20 +789,95 @@ class EzeeCanteen(QMainWindow):
         self.current_date = datetime.now().date()  # Track date for token counter reset
         self.settings_mode = False  # Flag to indicate if we're in settings mode
         self.parent_window = None  # Reference to parent window if in settings mode
-        self.init_ui()
         
-        # Get device details
-        self.device_serial, self.device_mac = getDeviceDetails(IP, PORT, USERNAME, PASSWORD)
-        logging.info(f"Device details initialized: Serial={self.device_serial}, MAC={self.device_mac}")
+        # Store device configurations
+        self.active_devices = {}  # Will store device IP -> monitor thread mapping
+        self.device_printers = {}  # Will store device IP -> printer details mapping
+        
+        self.init_ui()
         
         # Test database connection
         self.test_db_connection()
         
-        # Test printer availability
-        self.test_printer_connection()
-        
         # Connect resize event to refresh grid
         self.resized = False
+        
+        # Initialize devices and start monitors
+        self.initialize_devices()
+        
+        # Set up timer to periodically check printer connections
+        self.printer_check_timer = QTimer(self)
+        self.printer_check_timer.timeout.connect(self.test_printer_connections)
+        self.printer_check_timer.start(60000)  # Check every 60 seconds
+    
+    def initialize_devices(self):
+        """Initialize all configured authentication devices and their printers"""
+        if not DEVICES:
+            # If no devices were configured, use a single monitor with default settings
+            logging.warning("No devices configured. Using default device configuration.")
+            self.setup_single_device_monitor()
+            return
+            
+        logging.info(f"Initializing {len(DEVICES)} authentication devices")
+        
+        # Start a monitor for each configured device
+        for device_ip, config in DEVICES.items():
+            try:
+                # Get device details
+                device_config = config['device']
+                printer_config = config['printer']
+                
+                # Store printer configuration for this device
+                self.device_printers[device_ip] = {
+                    'ip': printer_config['ip'],
+                    'port': printer_config['port'],
+                    'available': False  # Will be set by test_printer_connections
+                }
+                
+                # Get device serial and MAC
+                device_serial, device_mac = getDeviceDetails(
+                    device_config['ip'], 
+                    device_config['port'], 
+                    device_config['user'], 
+                    device_config['password']
+                )
+                
+                # Store the device serial for the first device (for backward compatibility)
+                if not hasattr(self, 'device_serial'):
+                    self.device_serial = device_serial
+                    self.device_mac = device_mac
+                
+                # Start authentication event monitor for this device
+                auth_monitor = AuthEventMonitor(self.communicator, device_ip)
+                auth_monitor.start()
+                
+                # Store monitor in active devices
+                self.active_devices[device_ip] = {
+                    'monitor': auth_monitor,
+                    'serial': device_serial,
+                    'mac': device_mac
+                }
+                
+                logging.info(f"Started monitor for device {device_ip}:{device_config['port']} with serial {device_serial}")
+                
+            except Exception as e:
+                logging.error(f"Error initializing device {device_ip}: {e}")
+        
+        # Connect the signal to handle authentication events
+        # We'll determine which device generated the event when handling it
+        self.communicator.new_auth_event.connect(self.add_auth_event)
+        
+        # Test printer connections
+        self.test_printer_connections()
+    
+    def setup_single_device_monitor(self):
+        """Set up a single device monitor using default configuration"""
+        # Get device details
+        self.device_serial, self.device_mac = getDeviceDetails(IP, PORT, USERNAME, PASSWORD)
+        logging.info(f"Device details initialized: Serial={self.device_serial}, MAC={self.device_mac}")
+        
+        # Test printer availability
+        self.test_printer_connection()
         
         # Start authentication event monitor thread
         self.auth_monitor = AuthEventMonitor(self.communicator)
@@ -670,18 +893,37 @@ class EzeeCanteen(QMainWindow):
                 self.printer_port = printer_config.get('Port', 9100)
                 self.header = printer_config.get('Header', {'enable': True, 'text': "EzeeCanteen"})
                 self.footer = printer_config.get('Footer', {'enable': True, 'text': "Thank you!"})
-                self.special_message = printer_config.get('SpecialMessage', "")
+                self.special_message = app_settings.get('CanteenMenu', {}).get('SpecialMessage', "")
         except Exception as e:
             print(f"Error loading printer settings: {e}")
-
-        
-        # Set up timer to periodically check printer connection
-        self.printer_check_timer = QTimer(self)
-        self.printer_check_timer.timeout.connect(self.test_printer_connection)
-        self.printer_check_timer.start(60000)  # Check every 60 seconds
     
+    def test_printer_connections(self):
+        """Test all configured printer connections"""
+        if self.device_printers:
+            # Test all configured printers
+            for device_ip, printer in self.device_printers.items():
+                try:
+                    # Check printer connection with timeout
+                    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    s.settimeout(1)  # 1 second timeout
+                    result = s.connect_ex((printer['ip'], printer['port']))
+                    s.close()
+                    
+                    printer['available'] = (result == 0)
+                    
+                    if printer['available']:
+                        logging.info(f"Printer {printer['ip']}:{printer['port']} connection successful (for device {device_ip})")
+                    else:
+                        logging.warning(f"Printer {printer['ip']}:{printer['port']} connection failed (for device {device_ip})")
+                except Exception as e:
+                    printer['available'] = False
+                    logging.error(f"Error testing printer {printer['ip']}:{printer['port']} (for device {device_ip}): {e}")
+        else:
+            # Legacy mode - test the single printer
+            self.test_printer_connection()
+            
     def test_printer_connection(self):
-        """Test printer connection and set a flag if it's not available"""
+        """Legacy method to test single printer connection"""
         self.printer_available = False
         
         try:
@@ -693,10 +935,14 @@ class EzeeCanteen(QMainWindow):
                         printer_config = app_settings.get('PrinterConfig', {})
                         self.printer_ip = printer_config.get('IP', "192.168.0.251")
                         self.printer_port = printer_config.get('Port', 9100)
+                        self.header = printer_config.get('Header', {'enable': True, 'text': "EzeeCanteen"})
+                        self.footer = printer_config.get('Footer', {'enable': True, 'text': "Thank you!"})
                         logging.info(f"Loaded printer config: IP={self.printer_ip}, Port={self.printer_port}")
                 except Exception as e:
                     self.printer_ip = "192.168.0.251"
                     self.printer_port = 9100
+                    self.header = {'enable': True, 'text': "EzeeCanteen"}
+                    self.footer = {'enable': True, 'text': "Thank you!"}
                     logging.error(f"Error loading printer settings: {e}")
             
             # Check printer connection with timeout
@@ -773,17 +1019,49 @@ class EzeeCanteen(QMainWindow):
                 recognition_mode = "Card"
             elif minor == 38:
                 recognition_mode = "Fingerprint"
-            else:
+            elif minor == 75:
                 recognition_mode = "Face"
+            else:
+                recognition_mode = "Unknown"  # This should never happen due to earlier check in add_auth_event
+            
             
             # Get attendance status
-            attendance_status = None
             if "AttendanceInfo" in event_data:
                 att = event_data["AttendanceInfo"]
                 attendance_status = att.get('attendanceStatus', None)
                 att_in_out = att.get('labelName', None)
+                
+                # Update special message from app settings
+                try:
+                    with open('appSettings.json', 'r') as f:
+                        app_settings = json.load(f)
+                        self.special_message = app_settings.get('CanteenMenu', {}).get('SpecialMessage', "")
+                except Exception as e:
+                    print(f"Error loading special message: {e}")
+                    if attendance_status:
+                        self.special_message = f"Status: {attendance_status}"
             else:
+                attendance_status = None
                 att_in_out = None
+            
+            # Determine which device IP to use
+            device_ip = None
+            
+            # Try to match based on auth_monitor IP in each monitor
+            if hasattr(self, 'active_devices') and self.active_devices:
+                # Try to identify which device generated this event
+                for ip, device_info in self.active_devices.items():
+                    monitor = device_info['monitor']
+                    if monitor.ip == getattr(event_data, 'deviceIP', None):
+                        device_ip = ip
+                        break
+                    
+                if not device_ip:
+                    # If we couldn't determine the source, use the first active device
+                    device_ip = next(iter(self.active_devices))
+            else:
+                # Legacy mode - use the global IP
+                device_ip = IP
             
             # Prepare SQL query
             sql = f"""
@@ -793,9 +1071,16 @@ class EzeeCanteen(QMainWindow):
                 ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
             
-            # Use device serial if available, otherwise use event serial
-            device_serial = getattr(self, 'device_serial', '')
-            serial_no = device_serial if device_serial else event_data.get('serialNo', '')
+            # Get device serial based on which device generated the event
+            serial_no = ""
+            if hasattr(self, 'active_devices') and device_ip in self.active_devices:
+                serial_no = self.active_devices[device_ip]['serial']
+            else:
+                # Legacy mode - use the global device_serial
+                serial_no = getattr(self, 'device_serial', '')
+            
+            if not serial_no:
+                serial_no = event_data.get('serialNo', '')
             
             # Prepare values
             values = (
@@ -803,14 +1088,14 @@ class EzeeCanteen(QMainWindow):
                 punch_datetime,                         # PunchDateTime
                 punch_pic_url,                          # PunchPicURL
                 recognition_mode,                       # RecognitionMode
-                IP,                                     # IPAddress
+                device_ip,                              # IPAddress - Use the actual device IP
                 attendance_status,                      # AttendanceStatus
                 DB_NAME,                                # DB
                 att_in_out,                             # AttInOut
                 'Y',                                    # Inserted
                 serial_no,                              # ZK_SerialNo
                 datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                'timeBase' #CanteenMode
+                'timeBase'                              # CanteenMode
             )
             
             # Execute query
@@ -1037,10 +1322,40 @@ class EzeeCanteen(QMainWindow):
     
     def add_auth_event(self, event_data):
         """Add a new authentication event to the grid and print a token"""
+        # Check if the minor value is one of the supported authentication types
+        minor = event_data.get('minor', 0)
+        if minor not in [1, 38, 75]:
+            print(f"Skipping event with unsupported minor value: {minor}")
+            return
+        
         # Add event to the list
         if(event_data.get('employeeNoString')):
             print(f"event_data{event_data}\n\n")
             self.events.insert(0, event_data)
+            
+            # Process disable punch logic - check if DisablePunch is enabled
+            try:
+                with open('appSettings.json', 'r') as f:
+                    app_settings = json.load(f)
+                    disable_punch = app_settings.get('CanteenMenu', {}).get('DisablePunch', False)
+                    
+                    if disable_punch:
+                        # Get employee ID
+                        emp_id = event_data.get('employeeNoString', event_data.get('employeeNo', None))
+                        emp_name = event_data.get('name', None)
+                        print("THOS IOS TJHE OMNAME OF TJHE EM<PT: ", emp_name)
+                        print(f"\n----------------------------------------\nemp_name: {emp_name}\nemp_id: {emp_id}\n----------------------------------------\n")
+                        if emp_id and emp_name:
+                            print("BOTHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH")
+                            self.update_user_begin_time(emp_id, emp_name, app_settings)
+                        elif emp_id:
+                            print("SINGLEEEEEEEEEEEEEEEEEEEEEEEEEEEEE")
+                            self.update_user_begin_time(emp_id, app_settings)
+                        else:
+                            print(f"No employee ID or name found for event data: {event_data}")
+
+            except Exception as e:
+                logging.error(f"Error processing DisablePunch feature: {e}")
             
             # Insert data into database
             self.insert_to_database(event_data)
@@ -1063,64 +1378,147 @@ class EzeeCanteen(QMainWindow):
             if 'T' in punch_time:
                 punch_time = punch_time.replace('T', ' ').split('+')[0]
             
-            # Determine coupon type based on current time
-            current_hour = datetime.now().hour
-            if 6 <= current_hour < 11:
-                coupon_type = "BREAKFAST"
-            elif 11 <= current_hour < 15:
-                coupon_type = "LUNCH"
-            elif 15 <= current_hour < 18:
-                coupon_type = "SNACKS"
-            elif 18 <= current_hour < 22:
-                coupon_type = "DINNER"
-            else:
-                coupon_type = "MEAL"
+            # Determine coupon type based on current time from appSettings.json
+            try:
+                current_time = datetime.now().strftime('%H:%M')
+                coupon_type = "MEAL"  # Default value
+                
+                # Read meal schedule from appSettings.json
+                with open('appSettings.json', 'r') as f:
+                    app_settings = json.load(f)
+                    meal_schedule = app_settings.get('CanteenMenu', {}).get('MealSchedule', [])
+                    self.special_message = app_settings.get('CanteenMenu', {}).get('SpecialMessage', "")
+                
+                # Get header and footer if not already loaded
+                if not hasattr(self, 'header') or not hasattr(self, 'footer'):
+                    printer_config = app_settings.get('PrinterConfig', {})
+                    self.header = printer_config.get('Header', {'enable': True, 'text': "EzeeCanteen"})
+                    self.footer = printer_config.get('Footer', {'enable': True, 'text': "Thank you!"})
+            
+                # Check which meal time range the current time falls into
+                for meal in meal_schedule:
+                    from_time = meal.get('fromTime', '')
+                    to_time = meal.get('toTime', '')
+                    meal_type = meal.get('mealType', '')
+                    
+                    if from_time and to_time and meal_type and from_time <= current_time <= to_time:
+                        coupon_type = meal_type.upper()
+                        break
+            except Exception as e:
+                # Fallback to hardcoded values if there's an error
+                current_hour = datetime.now().hour
+                if 6 <= current_hour < 11:
+                    coupon_type = "BREAKFAST"
+                elif 11 <= current_hour < 15:
+                    coupon_type = "LUNCH"
+                elif 15 <= current_hour < 18:
+                    coupon_type = "SNACKS"
+                elif 18 <= current_hour < 22:
+                    coupon_type = "DINNER"
+                else:
+                    coupon_type = "MEAL"
+                print(f"Error determining meal type from settings: {e}")
             
             # Get attendance status if available
             if "AttendanceInfo" in event_data:
                 att = event_data["AttendanceInfo"]
                 status = att.get('attendanceStatus', '')
                 if status:
-                    self.special_message = f"Status: {status}"
+                    # Update special message from app settings
+                    try:
+                        with open('appSettings.json', 'r') as f:
+                            app_settings = json.load(f)
+                            self.special_message = app_settings.get('CanteenMenu', {}).get('SpecialMessage', "")
+                    except Exception as e:
+                        print(f"Error loading special message: {e}")
+                        self.special_message = f"Status: {status}"
             
-            # Print token slip only if printer is available
-            if hasattr(self, 'printer_available') and self.printer_available:
+            # Determine which device generated this event (to find the correct printer)
+            source_ip = None
+            # If we have multiple devices configured, try to determine which one generated this event
+            if self.active_devices:
+                # Try to match based on auth_monitor IP in each monitor
+                for device_ip, device_info in self.active_devices.items():
+                    monitor = device_info['monitor']
+                    if monitor.ip == getattr(event_data, 'deviceIP', None):
+                        source_ip = device_ip
+                        break
+            
+                if not source_ip:
+                    # If we couldn't determine the source, use the first active device
+                    source_ip = next(iter(self.active_devices))
+                    logging.warning(f"Could not determine source device for event. Using {source_ip}")
+            
+            # Check if printer is available and print token
+            printer_available = False
+            printer_ip = None
+            printer_port = None
+            
+            if source_ip and source_ip in self.device_printers:
+                # Use the printer associated with this device
+                printer_available = True
+
+                printer = self.device_printers[source_ip]
+                printer_available = printer['available']
+                printer_ip = printer['ip']
+                printer_port = printer['port']
+                logging.info(f"Using printer {printer_ip}:{printer_port} for device {source_ip}")
+            elif hasattr(self, 'printer_available') and self.printer_available:
+                # Legacy mode - use the single printer
+                printer_available = self.printer_available
+                printer_ip = self.printer_ip
+                printer_port = self.printer_port
+                logging.info(f"Using legacy printer {printer_ip}:{printer_port}")
+            
+            print(f"printer_available: {printer_available}")
+            print(f"printer_ip: {printer_ip}")
+            print(f"printer_port: {printer_port}")
+            # Attempt to print token if printer is available
+            if printer_available and printer_ip and printer_port:
                 try:
-                    # Check if printer is still available with short timeout
+                    # Double-check printer is still available with short timeout
                     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                     s.settimeout(0.5)  # 0.5 second timeout
-                    result = s.connect_ex((self.printer_ip, self.printer_port))
+                    result = s.connect_ex((printer_ip, printer_port))
                     s.close()
                     
                     if result == 0:
                         # Printer is available, print the token
                         print_slip(
-                            self.printer_ip, 
-                            self.printer_port, 
+                            printer_ip, 
+                            printer_port, 
                             0, 
-                            self.header, 
+                            self.header if hasattr(self, 'header') else {'enable': True, 'text': "EzeeCanteen"}, 
                             coupon_type, 
                             emp_id, 
                             name, 
                             punch_time, 
-                            self.special_message, 
-                            self.footer
+                            self.special_message if hasattr(self, 'special_message') else "", 
+                            self.footer if hasattr(self, 'footer') else {'enable': True, 'text': "Thank you!"}
                         )
-                        print(f"Token {self.token_counter} printed for {name}")
+                        print(f"Token {self.token_counter} printed for {name} on printer {printer_ip}:{printer_port}")
                     else:
-                        print(f"Skipping print - printer not available at {self.printer_ip}:{self.printer_port}")
-                        self.printer_available = False
+                        print(f"Skipping print - printer not available at {printer_ip}:{printer_port}")
+                        # Update printer availability status
+                        if source_ip and source_ip in self.device_printers:
+                            self.device_printers[source_ip]['available'] = False
+                        else:
+                            self.printer_available = False
                 except Exception as e:
                     print(f"Error printing token: {e}")
-                    self.printer_available = False
+                    # Update printer availability status
+                    if source_ip and source_ip in self.device_printers:
+                        self.device_printers[source_ip]['available'] = False
+                    else:
+                        self.printer_available = False
             else:
-                print(f"Skipping print - printer not configured or not available")
+                print(f"Skipping print - no printer available for this device")
         
             # Only modify the grid to add the new event instead of rebuilding the entire grid
             # Check if grid_layout still exists and is valid
             if not hasattr(self, 'grid_layout') or sip.isdeleted(self.grid_layout):
                 return
-                
+            
             # Determine number of columns based on window width
             window_width = self.width()
             
@@ -1135,7 +1533,7 @@ class EzeeCanteen(QMainWindow):
                 cols = 4  # 4 columns in smaller medium window
             else:
                 cols = 3  # 3 columns in small window
-                
+            
             # Create new event item
             new_event_item = AuthEventItem(event_data)
             
@@ -1192,47 +1590,150 @@ class EzeeCanteen(QMainWindow):
             if len(self.events) > self.max_events:
                 self.events = self.events[:self.max_events]
     
-    def open_settings(self):
-        """Function to handle settings button click"""
-        # Stop the authentication monitor
-        self.communicator.stop_server.emit()
-        
-        # Check if we're in settings mode
-        if self.settings_mode and self.parent_window:
-            # If we are, recreate the settings UI
-            try:
-                from settings import main as settings_main
-                new_settings_widget = settings_main()
-                
-                # Set new settings widget as central widget of parent
-                self.parent_window.setCentralWidget(new_settings_widget)
-                
-                # No need to close this instance as it will be removed by setCentralWidget
-            except Exception as e:
-                print(f"Error recreating settings view: {e}")
-                # Fall back to closing ourselves if there's an error
-                self.close()
-                os.system("python settings.py")
-            return
-        
-        # If not in settings mode, try to load the settings UI in the same window
+    def update_user_begin_time(self, employee_no, employee_name, app_settings):
+        """Update the user's begin time to the next meal time"""
         try:
-            # Save current window geometry
-            geometry = self.geometry()
+            # Get current time
+            current_time = datetime.now()
+            current_time_str = current_time.strftime('%H:%M')
+            current_date = current_time.strftime('%Y-%m-%dT')
             
-            # Import the settings module and get settings window
-            from settings import main as settings_main
-            settings_window = settings_main()
+            # Get meal schedule
+            meal_schedule = app_settings.get('CanteenMenu', {}).get('MealSchedule', [])
+            if not meal_schedule:
+                logging.warning("No meal schedule found - cannot update begin time")
+                return
             
-            # Set settings as central widget
-            self.setCentralWidget(settings_window)
+            # Sort meal schedule by time
+            meal_schedule.sort(key=lambda x: x.get('fromTime', '00:00'))
             
-            # Restore window geometry
-            self.setGeometry(geometry)
+            # Find the next meal time
+            next_meal = None
+            for meal in meal_schedule:
+                from_time = meal.get('fromTime', '')
+                if from_time and from_time > current_time_str:
+                    next_meal = meal
+                    break
+            
+            if next_meal:
+                # Use today's date with the next meal time - format: YYYY-MM-DDThh:mm:ss
+                next_begin_time = f"{current_date}{next_meal.get('fromTime', '00:00')}:00"
+            else:
+                # Use tomorrow's date with the first meal time of the day
+                tomorrow = current_time + timedelta(days=1)
+                tomorrow_date = tomorrow.strftime('%Y-%m-%dT')
+                # Use the first meal from the schedule for tomorrow
+                first_meal = meal_schedule[0]
+                next_begin_time = f"{tomorrow_date}{first_meal.get('fromTime', '00:00')}:00"
+            
+            logging.info(f"Setting begin time for employee {employee_no} to {next_begin_time}")
+            
+            # Determine which device to use for updating user
+            device_ip = None
+            device_auth = None
+            
+            # If we have multiple devices configured
+            if hasattr(self, 'active_devices') and self.active_devices:
+                # Try to identify which device generated this event or use the first one
+                device_ip = next(iter(self.active_devices))
+                device_info = self.active_devices[device_ip]
+                device_auth = {
+                    'ip': device_info['monitor'].ip,
+                    'port': device_info['monitor'].port,
+                    'user': device_info['monitor'].username,
+                    'password': device_info['monitor'].password
+                }
+            else:
+                # Legacy mode - use the global values
+                device_auth = {
+                    'ip': IP,
+                    'port': PORT,
+                    'user': USERNAME,
+                    'password': PASSWORD
+                }
+            
+            # Construct base URL
+            base_url = f"http://{device_auth['ip']}:{device_auth['port']}"
+            
+            print(f"base_url: {base_url}")
+            print(f"device_auth: {device_auth}")
+            print(f"employee_no: {employee_no}")
+            print(f"next_begin_time: {next_begin_time}")
+            # Call the API function to update the user's begin time
+            result = modify_user_begin_time(
+                base_url, 
+                device_auth['user'], 
+                device_auth['password'], 
+                employee_no, 
+                next_begin_time,
+                employee_name
+            )
+            print(f"\n----------------------------------------\nTime updated result: {result}\n----------------------------------------\n")
+            logging.info(f"User begin time update result: {result}")
             
         except Exception as e:
-            print(f"Error loading settings view: {e}")
-            # If there's an error, fall back to the original approach
+            logging.error(f"Error updating user begin time: {e}")
+            
+    def open_settings(self):
+        """Function to handle settings button click"""
+        logging.info("Settings button clicked - stopping authentication monitor")
+        try:
+            # Stop the authentication monitor
+            if hasattr(self, 'auth_monitor'):
+                self.communicator.stop_server.emit()
+                
+                # Give the monitor a moment to process the stop signal
+                QTimer.singleShot(100, self._continue_to_settings)
+            else:
+                self._continue_to_settings()
+        except Exception as e:
+            logging.error(f"Error stopping authentication monitor: {e}")
+            self._continue_to_settings()
+    
+    def _continue_to_settings(self):
+        """Continue with opening settings after stopping monitor"""
+        try:
+            # Check if we're in settings mode
+            if self.settings_mode and self.parent_window:
+                # If we are, recreate the settings UI
+                try:
+                    from settings import main as settings_main
+                    new_settings_widget = settings_main()
+                    
+                    # Set new settings widget as central widget of parent
+                    self.parent_window.setCentralWidget(new_settings_widget)
+                    
+                    # No need to close this instance as it will be removed by setCentralWidget
+                except Exception as e:
+                    logging.error(f"Error recreating settings view: {e}")
+                    # Fall back to closing ourselves if there's an error
+                    self.close()
+                    os.system("python settings.py")
+                return
+            
+            # If not in settings mode, try to load the settings UI in the same window
+            try:
+                # Save current window geometry
+                geometry = self.geometry()
+                
+                # Import the settings module and get settings window
+                from settings import main as settings_main
+                settings_window = settings_main()
+                
+                # Set settings as central widget
+                self.setCentralWidget(settings_window)
+                
+                # Restore window geometry
+                self.setGeometry(geometry)
+                
+            except Exception as e:
+                logging.error(f"Error loading settings view: {e}")
+                # If there's an error, fall back to the original approach
+                self.close()
+                os.system("python settings.py")
+        except Exception as e:
+            logging.error(f"Unexpected error opening settings: {e}")
+            # Ultimate fallback
             self.close()
             os.system("python settings.py")
     
@@ -1271,7 +1772,7 @@ class EzeeCanteen(QMainWindow):
         elif window_width >= 1280:
             cols = 6  # 6 columns in wide window
         elif window_width >= 900:
-            cols = 4  # 5 columns in medium window
+            cols = 5  # 5 columns in medium window
         elif window_width >= 768:
             cols = 4  # 4 columns in smaller medium window
         else:
@@ -1295,6 +1796,20 @@ class EzeeCanteen(QMainWindow):
         """Handle window close event"""
         # Stop monitoring authentication events
         self.communicator.stop_server.emit()
+        
+        # Stop all active device monitors
+        if hasattr(self, 'active_devices'):
+            for device_ip, device_info in self.active_devices.items():
+                monitor = device_info['monitor']
+                if monitor and monitor.isRunning():
+                    try:
+                        monitor.stop()
+                        if not monitor.wait(1000):  # 1 second timeout
+                            monitor.terminate()
+                            monitor.wait()
+                        logging.info(f"Stopped monitor for device {device_ip}")
+                    except Exception as e:
+                        logging.error(f"Error stopping monitor for device {device_ip}: {e}")
         
         # Stop printer check timer
         if hasattr(self, 'printer_check_timer') and self.printer_check_timer.isActive():

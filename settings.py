@@ -9,6 +9,7 @@ from PyQt5.QtGui import QColor
 import os
 import mysql.connector  # Added for database connection
 from PyQt5 import sip
+import json
 
 # Database configuration
 DB_HOST = "103.216.211.36"
@@ -198,7 +199,7 @@ class EzeeCanteenWindow(QMainWindow):
                             SELECT DeviceType, DeviceNumber, IP, Port, DeviceLocation, ComUser,
                                    Enable, DevicePrinterIP 
                             FROM configh 
-                            WHERE DeviceType = 'Printer'
+                            WHERE DeviceType = 'Printer' OR DeviceType != 'Device'
                         """)
                         printer_data = alt_cursor.fetchall()
                         
@@ -207,7 +208,7 @@ class EzeeCanteenWindow(QMainWindow):
                             SELECT DeviceType, DeviceNumber, IP, Port, DeviceLocation, ComUser,
                                    Enable, DevicePrinterIP 
                             FROM configh 
-                            WHERE DeviceType != 'Printer'
+                            WHERE DeviceType = 'Device'
                         """)
                         device_data = alt_cursor.fetchall()
                         
@@ -280,7 +281,7 @@ class EzeeCanteenWindow(QMainWindow):
                 # Process devices
                 for device in devices_data:
                     print(f"Manual loader processing: {device}")
-                    if device.get('DeviceType') == 'Printer':
+                    if device.get('DeviceType') == 'Printer' or device.get('DeviceType') != 'Device':
                         self.printers.append({
                             'name': 'CITIZEN',
                             'ip': device['IP'],
@@ -409,10 +410,10 @@ class EzeeCanteenWindow(QMainWindow):
             # Create a dictionary to map printer IPs to their index in the printers list
             printer_ip_map = {}
             
-            # First pass: collect all printers
+            # First pass: collect all printers and any non-"Device" types
             for device in results:
-                if device.get('DeviceType') == 'Printer':
-                    print(f"Found printer: {device}")
+                if device.get('DeviceType') == 'Printer' or device.get('DeviceType') != 'Device':
+                    print(f"Found printer or non-device type: {device}")
                     
                     printer_data = {
                         "deviceType": device["DeviceType"],
@@ -431,9 +432,9 @@ class EzeeCanteenWindow(QMainWindow):
                     printer_ip_map[device["IP"]] = len(printers) - 1
                     print(f"Added printer with IP {device['IP']} at index {len(printers) - 1}")
             
-            # Second pass: collect all non-printer devices
+            # Second pass: collect only "Device" type devices
             for device in results:
-                if device.get('DeviceType') != 'Printer':
+                if device.get('DeviceType') == 'Device':
                     print(f"Processing device: {device}")
                     
                     # Check if all required fields exist
@@ -1427,22 +1428,98 @@ class EzeeCanteenWindow(QMainWindow):
             print("Failed to clear cache!")
     
     async def load_settings_mock(self):
-        # Mock settings data
-        return {
+        # Load settings from appSettings.json
+        import json
+        import os
+        
+        file_path = 'appSettings.json'
+        settings = {
             'ServerSetting': {'DPToggle': 'YES', 'Port': '8080'},
-            'printers': [
-                {'name': 'Printer1', 'ip': '192.168.1.100', 'type': 'Laser'},
-                {'name': 'Printer2', 'ip': '192.168.1.101', 'type': 'Inkjet'}
-            ],
-            'devices': [
-                {'ip': '192.168.1.200', 'location': 'Kitchen', 'printerName': 'Printer1'},
-                {'ip': '192.168.1.201', 'location': 'Counter', 'printerName': 'Printer2'}
-            ]
+            'printers': [],
+            'devices': []
         }
+        
+        # Load from file if it exists
+        if os.path.exists(file_path):
+            try:
+                with open(file_path, 'r') as file:
+                    file_settings = json.load(file)
+                    
+                    # Update settings with values from file
+                    if 'ServerSetting' in file_settings:
+                        settings['ServerSetting'] = file_settings['ServerSetting']
+                    
+                    if 'printers' in file_settings:
+                        settings['printers'] = file_settings['printers']
+                    
+                    if 'devices' in file_settings:
+                        settings['devices'] = file_settings['devices']
+                        
+                print(f"Settings loaded from {file_path}")
+            except Exception as e:
+                print(f"Error loading settings from {file_path}: {e}")
+                # Use default mock data if file read fails
+                settings = {
+                    'ServerSetting': {'DPToggle': 'YES', 'Port': '8080'},
+                    'printers': [
+                        {'name': 'Printer1', 'ip': '192.168.1.100', 'type': 'Laser', 'enable': 'Y'},
+                        {'name': 'Printer2', 'ip': '192.168.1.101', 'type': 'Inkjet', 'enable': 'Y'}
+                    ],
+                    'devices': [
+                        {'deviceType': 'Device', 'ip': '192.168.1.200', 'location': 'Kitchen', 'printerName': 'Printer1', 'enable': 'Y'},
+                        {'deviceType': 'Device', 'ip': '192.168.1.201', 'location': 'Counter', 'printerName': 'Printer2', 'enable': 'Y'}
+                    ]
+                }
+        else:
+            print(f"Settings file {file_path} not found, using default values")
+            # If file doesn't exist, use default mock data
+            settings = {
+                'ServerSetting': {'DPToggle': 'YES', 'Port': '8080'},
+                'printers': [
+                    {'name': 'Printer1', 'ip': '192.168.1.100', 'type': 'Laser', 'enable': 'Y'},
+                    {'name': 'Printer2', 'ip': '192.168.1.101', 'type': 'Inkjet', 'enable': 'Y'}
+                ],
+                'devices': [
+                    {'deviceType': 'Device', 'ip': '192.168.1.200', 'location': 'Kitchen', 'printerName': 'Printer1', 'enable': 'Y'},
+                    {'deviceType': 'Device', 'ip': '192.168.1.201', 'location': 'Counter', 'printerName': 'Printer2', 'enable': 'Y'}
+                ]
+            }
+            
+        return settings
     
     async def save_settings_mock(self, settings):
-        # Mock save settings
-        print("Settings saved:", settings)
+        # Load existing settings from appSettings.json
+        import json
+        import os
+        
+        file_path = 'appSettings.json'
+        existing_settings = {}
+        
+        # Load existing settings if file exists
+        if os.path.exists(file_path):
+            try:
+                with open(file_path, 'r') as file:
+                    existing_settings = json.load(file)
+            except Exception as e:
+                print(f"Error reading existing settings: {e}")
+        
+        # Update with new settings while preserving existing ones
+        if 'printers' in settings:
+            existing_settings['printers'] = settings['printers']
+        
+        if 'devices' in settings:
+            existing_settings['devices'] = settings['devices']
+        
+        if 'ServerSetting' in settings:
+            existing_settings['ServerSetting'] = settings['ServerSetting']
+        
+        # Save updated settings back to file
+        try:
+            with open(file_path, 'w') as file:
+                json.dump(existing_settings, file, indent=4)
+            print(f"Settings saved to {file_path}: {existing_settings}")
+        except Exception as e:
+            print(f"Error saving settings to {file_path}: {e}")
 
     def test_connection(self):
         """Test database connection and show results in a message box"""

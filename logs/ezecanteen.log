@@ -570,3 +570,166 @@ task: <Task pending name='Task-2' coro=<EzeeCanteenWindow.initialize_toggle_stat
 2025-05-20 12:54:10,853 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-20T12:54:09+05:30
 2025-05-20 12:54:15,057 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-20T12:54:14+05:30
 2025-05-20 12:55:07,650 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-21 15:46:28,486 - root - INFO - EzeeCanteen application starting
+2025-05-21 15:46:28,529 - root - INFO - Getting device details for 192.168.0.82:80 with user: admin, password length: 10
+2025-05-21 15:46:28,574 - root - INFO - Successfully retrieved device details from 192.168.0.82:80
+2025-05-21 15:46:28,582 - root - INFO - Device info: Model=DS-K1T671MF, Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-21 15:46:28,582 - root - INFO - Device details initialized: Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-21 15:46:28,582 - root - INFO - Testing database connection to 103.216.211.36:33975
+2025-05-21 15:46:28,676 - mysql.connector - INFO - package: mysql.connector.plugins
+2025-05-21 15:46:28,677 - mysql.connector - INFO - plugin_name: mysql_native_password
+2025-05-21 15:46:28,678 - mysql.connector - INFO - AUTHENTICATION_PLUGIN_CLASS: MySQLNativePasswordAuthPlugin
+2025-05-21 15:46:28,788 - root - INFO - Database connection successful
+2025-05-21 15:46:28,789 - root - INFO - Loaded printer config: IP=192.168.0.251, Port=9100
+2025-05-21 15:46:29,802 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-21 15:46:29,804 - root - INFO - Meal schedule configured: 10:09 to 15:59
+2025-05-21 15:46:29,805 - root - INFO - AuthEventMonitor initialized with endpoint: http://192.168.0.82:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-21 15:46:29,807 - root - INFO - Auth event monitoring started
+2025-05-21 15:46:36,484 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-21T15:46:36+05:30
+2025-05-21 15:46:36,486 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-21T15:46:36+05:30
+2025-05-21 15:46:41,744 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-21T15:46:41+05:30
+2025-05-21 15:47:30,814 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-21 15:48:30,817 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-21 15:49:30,820 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-21 15:50:19,582 - root - INFO - Settings button clicked - stopping authentication monitor
+2025-05-21 15:50:19,583 - root - INFO - Auth event monitoring stopping...
+2025-05-21 15:50:20,014 - root - INFO - Auth event monitoring stopped
+2025-05-21 15:50:25,425 - root - INFO - EzeeCanteen application starting
+2025-05-21 15:50:25,430 - root - INFO - Getting device details for 192.168.0.82:80 with user: admin, password length: 10
+2025-05-21 15:50:25,453 - root - INFO - Successfully retrieved device details from 192.168.0.82:80
+2025-05-21 15:50:25,454 - root - INFO - Device info: Model=DS-K1T671MF, Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-21 15:50:25,454 - root - INFO - Device details initialized: Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-21 15:50:25,455 - root - INFO - Testing database connection to 103.216.211.36:33975
+2025-05-21 15:50:25,686 - root - INFO - Database connection successful
+2025-05-21 15:50:25,689 - root - INFO - Loaded printer config: IP=192.168.0.251, Port=9100
+2025-05-21 15:50:26,702 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-21 15:50:26,705 - root - INFO - Meal schedule configured: 10:09 to 15:59
+2025-05-21 15:50:26,706 - root - INFO - AuthEventMonitor initialized with endpoint: http://192.168.0.82:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-21 15:50:26,715 - root - INFO - Auth event monitoring started
+2025-05-21 15:50:30,803 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-21 15:50:31,989 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-21T15:50:31+05:30
+2025-05-21 15:50:31,990 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-21T15:50:31+05:30
+2025-05-21 15:50:37,228 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-21T15:50:36+05:30
+2025-05-21 15:51:27,710 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-21 15:51:30,800 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-21 15:52:27,709 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-21 15:52:30,812 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-21 15:53:27,738 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-21 15:53:30,810 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-21 15:53:53,241 - root - ERROR - Connection error for 192.168.0.82:80. Device may be offline or unreachable.
+2025-05-21 15:54:11,531 - root - ERROR - Connection error for 192.168.0.82:80. Device may be offline or unreachable.
+2025-05-21 15:54:12,643 - root - ERROR - Connection error for 192.168.0.82:80. Device may be offline or unreachable.
+2025-05-21 15:54:13,649 - root - ERROR - Connection error for 192.168.0.82:80. Device may be offline or unreachable.
+2025-05-21 15:54:27,734 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-21 15:54:30,812 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-21 15:55:27,731 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-21 15:55:30,817 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-21 15:56:27,733 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-21 15:56:30,804 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-21 15:57:27,730 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-21 15:57:30,803 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-21 15:57:57,923 - root - ERROR - Connection error for 192.168.0.82:80. Device may be offline or unreachable.
+2025-05-21 15:57:58,936 - root - ERROR - Connection error for 192.168.0.82:80. Device may be offline or unreachable.
+2025-05-21 15:58:00,053 - root - ERROR - Connection error for 192.168.0.82:80. Device may be offline or unreachable.
+2025-05-21 15:58:27,734 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-21 15:58:30,810 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-21 15:59:27,723 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-21 15:59:30,813 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-21 16:00:27,740 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-21 16:00:30,817 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-21 16:01:44,890 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-21 16:01:44,892 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-21 16:02:27,733 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-21 16:02:45,504 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-21 16:03:27,738 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-21 16:03:45,509 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-21 16:04:27,740 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-21 16:04:40,544 - root - INFO - EzeeCanteen application starting
+2025-05-21 16:04:40,573 - root - INFO - Getting device details for 192.168.0.82:80 with user: admin, password length: 10
+2025-05-21 16:04:40,604 - root - INFO - Successfully retrieved device details from 192.168.0.82:80
+2025-05-21 16:04:40,612 - root - INFO - Device info: Model=DS-K1T671MF, Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-21 16:04:40,613 - root - INFO - Device details initialized: Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-21 16:04:40,613 - root - INFO - Testing database connection to 103.216.211.36:33975
+2025-05-21 16:04:40,706 - mysql.connector - INFO - package: mysql.connector.plugins
+2025-05-21 16:04:40,707 - mysql.connector - INFO - plugin_name: mysql_native_password
+2025-05-21 16:04:40,708 - mysql.connector - INFO - AUTHENTICATION_PLUGIN_CLASS: MySQLNativePasswordAuthPlugin
+2025-05-21 16:04:40,820 - root - INFO - Database connection successful
+2025-05-21 16:04:40,822 - root - INFO - Loaded printer config: IP=192.168.0.251, Port=9100
+2025-05-21 16:04:41,829 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-21 16:04:41,832 - root - INFO - Meal schedule configured: 10:09 to 18:59
+2025-05-21 16:04:41,833 - root - INFO - AuthEventMonitor initialized with endpoint: http://192.168.0.82:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-21 16:04:41,835 - root - INFO - Auth event monitoring started
+2025-05-21 16:04:42,227 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-21T16:04:14+05:30
+2025-05-21 16:04:42,228 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-21T16:04:41+05:30
+2025-05-21 16:04:42,229 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-21T16:04:41+05:30
+2025-05-21 16:04:45,382 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-21T16:04:44+05:30
+2025-05-21 16:04:47,469 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-21T16:04:46+05:30
+2025-05-21 16:04:49,558 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-21T16:04:48+05:30
+2025-05-21 16:04:51,651 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-21T16:04:51+05:30
+2025-05-21 16:04:53,749 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-21T16:04:53+05:30
+2025-05-21 16:04:55,835 - root - INFO - New authentication event: Employee ID=13, Name=PRIYANSH, Time=2025-05-21T16:04:54+05:30
+2025-05-21 16:04:59,988 - root - INFO - New authentication event: Employee ID=N/A, Name=N/A, Time=2025-05-21T16:04:59+05:30
+2025-05-21 16:06:01,229 - root - INFO - EzeeCanteen application starting
+2025-05-21 16:06:01,234 - root - INFO - Getting device details for 192.168.0.82:80 with user: admin, password length: 10
+2025-05-21 16:06:01,262 - root - INFO - Successfully retrieved device details from 192.168.0.82:80
+2025-05-21 16:06:01,271 - root - INFO - Device info: Model=DS-K1T671MF, Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-21 16:06:01,271 - root - INFO - Device details initialized: Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-21 16:06:01,272 - root - INFO - Testing database connection to 103.216.211.36:33975
+2025-05-21 16:06:01,439 - root - INFO - Database connection successful
+2025-05-21 16:06:01,440 - root - INFO - Loaded printer config: IP=192.168.0.251, Port=9100
+2025-05-21 16:06:02,441 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-21 16:06:02,444 - root - INFO - Meal schedule configured: 10:09 to 18:59
+2025-05-21 16:06:02,445 - root - INFO - AuthEventMonitor initialized with endpoint: http://192.168.0.82:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-21 16:06:02,447 - root - INFO - Auth event monitoring started
+2025-05-21 16:06:03,498 - root - INFO - Settings button clicked - stopping authentication monitor
+2025-05-21 16:06:03,498 - root - INFO - Auth event monitoring stopping...
+2025-05-21 16:06:03,508 - root - INFO - Auth event monitoring stopped
+2025-05-21 16:06:43,265 - root - INFO - EzeeCanteen application starting
+2025-05-21 16:06:43,270 - root - INFO - Getting device details for 192.168.0.82:80 with user: admin, password length: 10
+2025-05-21 16:06:43,307 - root - INFO - Successfully retrieved device details from 192.168.0.82:80
+2025-05-21 16:06:43,308 - root - INFO - Device info: Model=DS-K1T671MF, Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-21 16:06:43,308 - root - INFO - Device details initialized: Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-21 16:06:43,308 - root - INFO - Testing database connection to 103.216.211.36:33975
+2025-05-21 16:06:43,477 - root - INFO - Database connection successful
+2025-05-21 16:06:43,479 - root - INFO - Loaded printer config: IP=192.168.0.251, Port=9100
+2025-05-21 16:06:44,492 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-21 16:06:44,493 - root - INFO - Meal schedule configured: 10:09 to 18:59
+2025-05-21 16:06:44,494 - root - INFO - AuthEventMonitor initialized with endpoint: http://192.168.0.82:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-21 16:06:44,500 - root - INFO - Auth event monitoring started
+2025-05-21 16:06:45,949 - root - INFO - Settings button clicked - stopping authentication monitor
+2025-05-21 16:06:45,949 - root - INFO - Auth event monitoring stopping...
+2025-05-21 16:06:46,591 - root - INFO - Auth event monitoring stopped
+2025-05-21 16:06:46,625 - root - INFO - Settings button clicked - stopping authentication monitor
+2025-05-21 16:06:46,626 - root - INFO - Auth event monitoring stopping...
+2025-05-21 16:06:46,627 - root - INFO - Auth event monitoring stopped
+2025-05-21 16:42:06,397 - root - INFO - EzeeCanteen application starting
+2025-05-21 16:42:06,442 - root - INFO - Getting device details for 192.168.0.82:80 with user: admin, password length: 10
+2025-05-21 16:42:06,489 - root - INFO - Successfully retrieved device details from 192.168.0.82:80
+2025-05-21 16:42:06,498 - root - INFO - Device info: Model=DS-K1T671MF, Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-21 16:42:06,498 - root - INFO - Device details initialized: Serial=DS-K1T671MF20240614V030700ENFS3481787, MAC=A4:D5:C2:1D:99:AD
+2025-05-21 16:42:06,499 - root - INFO - Testing database connection to 103.216.211.36:33975
+2025-05-21 16:42:06,594 - mysql.connector - INFO - package: mysql.connector.plugins
+2025-05-21 16:42:06,594 - mysql.connector - INFO - plugin_name: mysql_native_password
+2025-05-21 16:42:06,597 - mysql.connector - INFO - AUTHENTICATION_PLUGIN_CLASS: MySQLNativePasswordAuthPlugin
+2025-05-21 16:42:06,731 - root - INFO - Database connection successful
+2025-05-21 16:42:06,734 - root - INFO - Loaded printer config: IP=192.168.0.251, Port=9100
+2025-05-21 16:42:07,740 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-21 16:42:07,742 - root - INFO - Meal schedule configured: 10:09 to 18:59
+2025-05-21 16:42:07,743 - root - INFO - AuthEventMonitor initialized with endpoint: http://192.168.0.82:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-21 16:42:07,745 - root - INFO - Auth event monitoring started
+2025-05-21 16:43:08,757 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-21 16:44:08,760 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-21 16:45:08,767 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-21 16:45:39,548 - root - ERROR - Connection error for 192.168.0.82:80. Device may be offline or unreachable.
+2025-05-21 16:45:40,565 - root - ERROR - Connection error for 192.168.0.82:80. Device may be offline or unreachable.
+2025-05-21 16:45:41,571 - root - ERROR - Connection error for 192.168.0.82:80. Device may be offline or unreachable.
+2025-05-21 16:45:42,593 - root - ERROR - Connection error for 192.168.0.82:80. Device may be offline or unreachable.
+2025-05-21 16:46:08,760 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-21 16:47:08,769 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-21 16:48:08,762 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-21 16:49:07,101 - root - INFO - Settings button clicked - stopping authentication monitor
+2025-05-21 16:49:07,102 - root - INFO - Auth event monitoring stopping...
+2025-05-21 16:49:07,463 - root - INFO - Auth event monitoring stopped
+2025-05-21 16:49:08,805 - root - WARNING - Printer connection failed (192.168.0.251:9100)
+2025-05-21 16:49:09,460 - root - INFO - Auth event monitoring stopping...
+2025-05-21 16:49:09,460 - root - INFO - Auth event monitoring stopped
