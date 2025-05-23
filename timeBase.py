@@ -24,10 +24,10 @@ from print import print_slip  # Import print_slip function
 from PyQt5 import sip
 
 # Default device configuration (will be used if DB fetch fails)
-IP = "192.168.0.82"
+IP = "192.168.0.86"
 PORT = 80
 USERNAME = "admin"
-PASSWORD = "a1234@4321"
+PASSWORD = "a1234@d321"
 
 # Database configuration
 DB_HOST = "103.216.211.36"
@@ -104,38 +104,47 @@ def fetch_device_config():
         # Create a cursor
         cursor = conn.cursor(dictionary=True)
         
-        # Fetch authentication devices (DeviceType = 'Device') with password decryption
-        query = """
-            SELECT DeviceNumber, IP, Port, DeviceLocation, ComUser, DevicePrinterIP,
-                   AES_DECRYPT(comKey, SHA2(CONCAT('pg2175', CreatedDateTime), 512)) as Pwd
-            FROM configh
-            WHERE DeviceType = 'Device' AND Enable = 'Y'
-            ORDER BY DeviceNumber
+        # Query to fetch all devices from configh table
+        sql = """
+        SELECT 
+            SrNo, DeviceType, DeviceNumber, IP, Port, DeviceLocation, ComUser, 
+            Enable, DevicePrinterIP, DeviceName,
+            AES_DECRYPT(comKey, SHA2(CONCAT('pg2175', CreatedDateTime), 512)) as Pwd
+        FROM configh
+        WHERE Enable = 'Y'
+        ORDER BY DeviceType, DeviceNumber
         """
         
-        cursor.execute(query)
-        auth_devices = cursor.fetchall()
+        cursor.execute(sql)
+        results = cursor.fetchall()
         
-        # Fetch printers (DeviceType = 'Printer')
-        printer_query = """
-            SELECT DeviceNumber, IP, Port
-            FROM configh
-            WHERE DeviceType = 'Printer' AND Enable = 'Y'
-        """
+        if not results:
+            logging.warning("No enabled devices found in database, using default values")
+            return
         
-        cursor.execute(printer_query)
-        printers = {printer['IP']: printer for printer in cursor.fetchall()}
+        # Create a dictionary to map printer IPs to their details
+        printer_ip_map = {}
         
-        if auth_devices:
-            # Process each authentication device
-            for device in auth_devices:
+        # First pass: collect all printers
+        for device in results:
+            if device.get('DeviceType') == 'Printer':
+                printer_ip_map[device['IP']] = {
+                    'ip': device['IP'],
+                    'port': device.get('Port', 9100) if device.get('Port') else 9100,
+                    'name': device.get('DeviceName', 'CITIZEN'),
+                    'location': device.get('DeviceLocation', '')
+                }
+        
+        # Second pass: process authentication devices and link them to printers
+        for device in results:
+            if device.get('DeviceType') == 'Device':
                 device_ip = device['IP']
-                device_port = device['Port'] if device['Port'] else 80
-                device_user = device['ComUser'] if device['ComUser'] else "admin"
-                device_pwd = None
+                device_port = device.get('Port', 80) if device.get('Port') else 80
+                device_user = device.get('ComUser', 'admin') if device.get('ComUser') else 'admin'
                 
                 # Handle the decrypted password
-                if device['Pwd'] is not None:
+                device_pwd = None
+                if device.get('Pwd') is not None:
                     try:
                         # Convert bytes to string if needed
                         if isinstance(device['Pwd'], bytes):
@@ -148,13 +157,32 @@ def fetch_device_config():
                 else:
                     device_pwd = PASSWORD  # Use default if no password
                 
-                # Find associated printer from DevicePrinterIP or use default
-                printer_ip = device['DevicePrinterIP']
-                printer_port = 9100  # Default printer port
+                # Find associated printer from DevicePrinterIP
+                printer_ip = device.get('DevicePrinterIP', '')
                 
-                # If printer exists in our printer table, use its port
-                if printer_ip in printers:
-                    printer_port = printers[printer_ip]['Port'] if printers[printer_ip]['Port'] else 9100
+                # If printer IP is not in our map, create a virtual printer entry
+                if printer_ip and printer_ip not in printer_ip_map:
+                    printer_ip_map[printer_ip] = {
+                        'ip': printer_ip,
+                        'port': 9100,  # Default port for printers
+                        'name': 'CITIZEN',  # Default name
+                        'virtual': True  # Mark as virtual printer
+                    }
+                    logging.info(f"Created virtual printer entry for IP: {printer_ip}")
+                
+                # Get printer details if available
+                printer_config = {
+                    'ip': printer_ip,
+                    'port': 9100  # Default printer port
+                }
+                
+                if printer_ip and printer_ip in printer_ip_map:
+                    printer_details = printer_ip_map[printer_ip]
+                    printer_config = {
+                        'ip': printer_details['ip'],
+                        'port': printer_details['port'],
+                        'name': printer_details.get('name', 'CITIZEN')
+                    }
                 
                 # Store device configuration with its printer
                 DEVICES[device_ip] = {
@@ -163,27 +191,22 @@ def fetch_device_config():
                         'port': device_port,
                         'user': device_user,
                         'password': device_pwd,
-                        'location': device['DeviceLocation']
+                        'location': device.get('DeviceLocation', ''),
+                        'enable': device.get('Enable', 'Y')
                     },
-                    'printer': {
-                        'ip': printer_ip,
-                        'port': printer_port
-                    }
+                    'printer': printer_config
                 }
                 
-                logging.info(f"Loaded device configuration: {device_ip}:{device_port} -> Printer: {printer_ip}:{printer_port}")
-            
-            # Set default device to the first one for backward compatibility
-            if DEVICES:
-                first_device = next(iter(DEVICES.values()))
-                IP = first_device['device']['ip']
-                PORT = first_device['device']['port']
-                USERNAME = first_device['device']['user']
-                PASSWORD = first_device['device']['password']
-                logging.info(f"Set default device to {IP}:{PORT}")
-            
-        else:
-            logging.warning("No enabled devices found in database, using default values")
+                logging.info(f"Loaded device configuration: {device_ip}:{device_port} -> Printer: {printer_config['ip']}:{printer_config['port']}")
+        
+        # Set default device to the first one for backward compatibility
+        if DEVICES:
+            first_device = next(iter(DEVICES.values()))
+            IP = first_device['device']['ip']
+            PORT = first_device['device']['port']
+            USERNAME = first_device['device']['user']
+            PASSWORD = first_device['device']['password']
+            logging.info(f"Set default device to {IP}:{PORT}")
         
         # Close cursor and connection
         cursor.close()
@@ -213,7 +236,7 @@ def print_server_addresses():
     
     # Print all device and printer configurations
     if DEVICES:
-        print("\nConfigured Devices:")
+        print("\n   :")
         for device_ip, config in DEVICES.items():
             print(f"  Device: {device_ip}:{config['device']['port']} ({config['device']['location'] or 'No location'})")
             print(f"  Printer: {config['printer']['ip']}:{config['printer']['port']}")
@@ -226,7 +249,7 @@ def print_server_addresses():
             with open('appSettings.json', 'r') as f:
                 app_settings = json.load(f)
                 printer_config = app_settings.get('PrinterConfig', {})
-                printer_ip = printer_config.get('IP', "192.168.0.251")
+                printer_ip = printer_config.get('IP', "192.168.0.253")
                 printer_port = printer_config.get('Port', 9100)
                 print(f"Default Printer: {printer_ip}:{printer_port}")
         except Exception as e:
@@ -326,6 +349,10 @@ class AuthEventMonitor(QThread):
         self.communicator = communicator
         self.running = True
         self.communicator.stop_server.connect(self.stop)
+        self.start_time = datetime.now()  # Store initialization time
+        self.consecutive_errors = 0  # Counter for consecutive errors
+        self.max_consecutive_errors = 5  # Maximum allowed consecutive errors
+        self.last_successful_fetch = datetime.now()  # Track when we last successfully fetched events
         
         # Read appSettings.json to get fromTime and toTime
         try:
@@ -369,25 +396,90 @@ class AuthEventMonitor(QThread):
         # URL for access control events
         self.url = f"http://{self.ip}:{self.port}/ISAPI/AccessControl/AcsEvent?format=json"
         logging.info(f"AuthEventMonitor initialized with endpoint: {self.url}")
+        logging.info(f"Starting to monitor events from: {self.start_time}")
         
         # Keep track of processed events
         self.processed_events = set()
+        
+        # Add watchdog timer that will restart the monitor if no events are received for a long time
+        self.watchdog_timer = QTimer()
+        self.watchdog_timer.timeout.connect(self.check_watchdog)
+        self.watchdog_timer.start(60000)  # Check every minute
     
     def check_time_range(self):
         """Check if current time is within the specified meal time range"""
-        if not self.from_time_str or not self.to_time_str:
-            return True  # If no time range specified, always proceed
-            
+        if not self.meal_schedule:
+            return True  # If no meal schedule specified, always proceed
+        
         current_time = datetime.now().strftime('%H:%M')
-        return self.from_time_str <= current_time <= self.to_time_str
+        
+        # Check all meal schedule entries
+        for meal in self.meal_schedule:
+            from_time = meal.get('fromTime', '')
+            to_time = meal.get('toTime', '')
+            
+            if from_time and to_time and from_time <= current_time <= to_time:
+                return True
+            
+        return False
+    
+    def check_watchdog(self):
+        """Check if we haven't received events for too long and reset if needed"""
+        if not self.running:
+            return
+        
+        # If it's been more than 10 minutes since our last successful fetch during a meal time
+        time_since_last_fetch = (datetime.now() - self.last_successful_fetch).total_seconds()
+        
+        if self.check_time_range() and time_since_last_fetch > 600:  # 10 minutes
+            logging.warning(f"No events received for {time_since_last_fetch} seconds during meal time. Resetting connection.")
+            # Reset the start time to now to avoid fetching old events
+            self.start_time = datetime.now()
+            # Reset consecutive errors counter
+            self.consecutive_errors = 0
+            # Update last fetch time to avoid immediate reset
+            self.last_successful_fetch = datetime.now()
+    
+    def retry_connection(self):
+        """Retry establishing connection with exponential backoff"""
+        # Reset the URL just in case
+        self.url = f"http://{self.ip}:{self.port}/ISAPI/AccessControl/AcsEvent?format=json"
+        
+        # Log the retry
+        logging.info(f"Retrying connection to {self.url}")
+        
+        # Refresh credentials from DEVICES if needed
+        if self.device_ip and self.device_ip in DEVICES:
+            device_config = DEVICES[self.device_ip]['device']
+            self.ip = device_config['ip']
+            self.port = device_config['port']
+            self.username = device_config['user']
+            self.password = device_config['password']
+            # Update URL with fresh credentials
+            self.url = f"http://{self.ip}:{self.port}/ISAPI/AccessControl/AcsEvent?format=json"
+            logging.info(f"Updated device credentials for retry: {self.ip}:{self.port}")
     
     def run(self):
         """Main monitoring loop"""
         logging.info("Auth event monitoring started")
+        in_meal_time = False  # Track if we were previously in a meal time
+        
         while self.running:
-            if not self.check_time_range():
+            # Check if current time is within a meal time
+            current_in_meal_time = self.check_time_range()
+            
+            # If we just entered a meal time period, update the start time
+            if current_in_meal_time and not in_meal_time:
+                self.start_time = datetime.now()
+                logging.info(f"Entered meal time period. Updated start time to: {self.start_time}")
+            
+            # Update meal time status for next iteration
+            in_meal_time = current_in_meal_time
+            
+            # If not in meal time, skip processing and sleep
+            if not current_in_meal_time:
                 # Sleep for shorter intervals to respond to stop signals more quickly
-                for _ in range(6):  # 6 x 10 seconds = 1 minute total
+                for _ in range(6):  # 6 x 1 seconds = 6 seconds total
                     if not self.running:
                         logging.info("Auth event monitoring stopping during sleep")
                         return
@@ -395,77 +487,150 @@ class AuthEventMonitor(QThread):
                 continue
                 
             try:
-                # Set time range (last 30 seconds)
+                # Set time range (from start time to now)
                 end_time = datetime.now() 
-                start_time = end_time - timedelta(seconds=30)
                 
                 # Format times with timezone
                 end_time_str = end_time.strftime('%Y-%m-%dT%H:%M:%S+05:30')
-                start_time_str = start_time.strftime('%Y-%m-%dT%H:%M:%S+05:30')
+                start_time_str = self.start_time.strftime('%Y-%m-%dT%H:%M:%S+05:30')
                 
-                # Create payload for authentication events
-                payload = {
-                    "AcsEventCond": {
-                        "searchID": "1",
-                        "searchResultPosition": 0,
-                        "maxResults": 10,
-                        "major": 5,  # Access Control
-                        "minor": 0,  # Authentication passed
-                        "startTime": start_time_str,
-                        "endTime": end_time_str
+                # Initialize pagination variables
+                search_position = 0
+                total_matches = None
+                num_matches = 0
+                has_more_pages = True
+                processed_ids = set()  # Track processed event IDs to avoid duplicates
+                
+                # Fetch all pages of results
+                while has_more_pages and self.running:
+                    # Create payload for authentication events with current search position
+                    payload = {
+                        "AcsEventCond": {
+                            "searchID": "1",
+                            "searchResultPosition": search_position,
+                            "maxResults": 5,  # Keep batch size reasonable
+                            "major": 5,  # Access Control
+                            "minor": 0,  # Authentication passed
+                            "startTime": start_time_str,
+                            "endTime": end_time_str
+                        }
                     }
-                }
-                
-                # Make the request
-                response = requests.post(
-                    self.url,
-                    json=payload,
-                    auth=HTTPDigestAuth(self.username, self.password),
-                    timeout=15,
-                    headers={'Content-Type': 'application/json'}
-                )
-                
-                # Process successful responses
-                if response.status_code == 200:
-                    try:
-                        data = response.json()
-                        
-                        # Extract event information if available
-                        if "AcsEvent" in data:
-                            info_list = data["AcsEvent"].get("InfoList", [])
-                            
-                            # Process each event
-                            for event in info_list:
-                                event_time = event.get('time')
-                                event_id = f"{event.get('employeeNoString', event.get('employeeNo', 'N/A'))}-{event_time}"
-                                
-                                # Check if this is a new event we haven't processed yet
-                                if event_id not in self.processed_events:
-                                    self.processed_events.add(event_id)
-                                    
-                                    # Log the new authentication event
-                                    emp_id = event.get('employeeNoString', event.get('employeeNo', 'N/A'))
-                                    name = event.get('name', 'N/A')
-                                    logging.info(f"New authentication event: Employee ID={emp_id}, Name={name}, Time={event_time}")
-                                    
-                                    # Emit signal with event data
-                                    self.communicator.new_auth_event.emit(event)
-                            
-                            # Limit the size of processed_events to avoid memory issues
-                            if len(self.processed_events) > 1000:
-                                # Keep only the most recent 500 events
-                                self.processed_events = set(list(self.processed_events)[-500:])
-                                logging.info("Pruned processed events cache to 500 entries")
                     
-                    except json.JSONDecodeError:
-                        logging.error("Response is not valid JSON")
+                    # Make the request with increased timeout
+                    response = requests.post(
+                        self.url,
+                        json=payload,
+                        auth=HTTPDigestAuth(self.username, self.password),
+                        timeout=30,  # Increased timeout from 15 to 30 seconds
+                        headers={'Content-Type': 'application/json'}
+                    )
+                    
+                    # Process successful responses
+                    if response.status_code == 200:
+                        # Reset consecutive errors on success
+                        self.consecutive_errors = 0
+                        # Update last successful fetch time
+                        self.last_successful_fetch = datetime.now()
                         
+                        try:
+                            data = response.json()
+                            
+                            # Get pagination information if this is the first page
+                            if total_matches is None and "AcsEvent" in data and "totalMatches" in data["AcsEvent"]:
+                                total_matches = int(data["AcsEvent"]["totalMatches"])
+                                logging.info(f"Found {total_matches} total authentication events")
+                            
+                            # Extract event information if available
+                            if "AcsEvent" in data:
+                                info_list = data["AcsEvent"].get("InfoList", [])
+                                page_events = len(info_list)
+                                
+                                # If no events were returned, we've reached the end
+                                if page_events == 0:
+                                    has_more_pages = False
+                                    break
+                                
+                                # Process each event
+                                for event in info_list:
+                                    event_time = event.get('time')
+                                    event_id = f"{event.get('employeeNoString', event.get('employeeNo', 'N/A'))}-{event_time}"
+                                    
+                                    # Check for duplicates within this batch
+                                    if event_id in processed_ids:
+                                        continue
+                                        
+                                    processed_ids.add(event_id)
+                                    
+                                    # Check if this is a new event we haven't processed yet
+                                    if event_id not in self.processed_events:
+                                        self.processed_events.add(event_id)
+                                        
+                                        # Log the new authentication event
+                                        emp_id = event.get('employeeNoString', event.get('employeeNo', 'N/A'))
+                                        name = event.get('name', 'N/A')
+                                        logging.info(f"New authentication event: Employee ID={emp_id}, Name={name}, Time={event_time}")
+                                        
+                                        # Add source device information to the event
+                                        event['source_device_ip'] = self.device_ip
+                                        event['deviceIP'] = self.ip
+                                        
+                                        # Emit signal with event data
+                                        self.communicator.new_auth_event.emit(event)
+                                
+                                # Update number of processed events
+                                num_matches += page_events
+                                
+                                # Update search position for next page
+                                search_position += page_events
+                                
+                                # Check if we've processed all events or reached a limit
+                                if (total_matches is not None and num_matches >= total_matches) or num_matches >= 300:
+                                    has_more_pages = False
+                                    break
+                            else:
+                                # No events found in response, exit pagination loop
+                                has_more_pages = False
+                        
+                        except json.JSONDecodeError as json_err:
+                            logging.error(f"Response is not valid JSON: {json_err}")
+                            self.consecutive_errors += 1
+                            has_more_pages = False
+                    else:
+                        # Log error and increment counter
+                        logging.error(f"API request failed with status code: {response.status_code}")
+                        self.consecutive_errors += 1
+                        has_more_pages = False
+                        
+                        # If unauthorized, try to refresh credentials
+                        if response.status_code == 401:
+                            logging.warning("Authentication failed. Attempting to refresh credentials.")
+                            self.retry_connection()
+                
+                # Limit the size of processed_events to avoid memory issues
+                if len(self.processed_events) > 1000:
+                    # Keep only the most recent 500 events
+                    self.processed_events = set(list(self.processed_events)[-500:])
+                    logging.info("Pruned processed events cache to 500 entries")
+                
             except requests.exceptions.Timeout:
                 logging.error(f"Timeout connecting to {self.ip}:{self.port}")
+                self.consecutive_errors += 1
+                time.sleep(2)  # Short sleep after timeout before retrying
             except requests.exceptions.ConnectionError:
                 logging.error(f"Connection error for {self.ip}:{self.port}. Device may be offline or unreachable.")
+                self.consecutive_errors += 1
+                time.sleep(5)  # Longer sleep after connection error
             except Exception as e:
                 logging.error(f"Error in monitoring loop: {e}")
+                self.consecutive_errors += 1
+            
+            # Check if we've had too many consecutive errors
+            if self.consecutive_errors >= self.max_consecutive_errors:
+                logging.warning(f"Reached {self.consecutive_errors} consecutive errors. Resetting connection...")
+                self.retry_connection()
+                self.consecutive_errors = 0  # Reset the counter
+                self.start_time = datetime.now()  # Reset start time to avoid fetching old events
+                time.sleep(10)  # Wait a bit before retrying
             
             # Sleep for a short period before the next check
             time.sleep(1)
@@ -474,6 +639,10 @@ class AuthEventMonitor(QThread):
         """Stop the monitoring thread"""
         logging.info("Auth event monitoring stopping...")
         self.running = False
+        
+        # Stop the watchdog timer
+        if self.watchdog_timer.isActive():
+            self.watchdog_timer.stop()
         
         # Wait for thread to finish, but with timeout
         if self.isRunning():
@@ -812,6 +981,10 @@ class EzeeCanteen(QMainWindow):
     
     def initialize_devices(self):
         """Initialize all configured authentication devices and their printers"""
+        # Clear any existing events when initializing
+        self.events = []
+        self.clear_grid()
+        
         if not DEVICES:
             # If no devices were configured, use a single monitor with default settings
             logging.warning("No devices configured. Using default device configuration.")
@@ -831,6 +1004,7 @@ class EzeeCanteen(QMainWindow):
                 self.device_printers[device_ip] = {
                     'ip': printer_config['ip'],
                     'port': printer_config['port'],
+                    'name': printer_config.get('name', 'CITIZEN'),
                     'available': False  # Will be set by test_printer_connections
                 }
                 
@@ -869,12 +1043,75 @@ class EzeeCanteen(QMainWindow):
         
         # Test printer connections
         self.test_printer_connections()
-    
+
     def setup_single_device_monitor(self):
         """Set up a single device monitor using default configuration"""
+        # Clear any existing events when setting up
+        self.events = []
+        self.clear_grid()
+        
         # Get device details
         self.device_serial, self.device_mac = getDeviceDetails(IP, PORT, USERNAME, PASSWORD)
         logging.info(f"Device details initialized: Serial={self.device_serial}, MAC={self.device_mac}")
+        
+        # Try to fetch printer configuration from database first
+        try:
+            conn = mysql.connector.connect(
+                host=DB_HOST,
+                user=DB_USER,
+                port=DB_PORT,
+                password=DB_PASS,
+                database=DB_NAME
+            )
+            
+            if conn:
+                cursor = conn.cursor(dictionary=True)
+                
+                # Find a printer entry in the database
+                printer_query = """
+                    SELECT IP, Port, DeviceName
+                    FROM configh
+                    WHERE DeviceType = 'Printer' AND Enable = 'Y'
+                    LIMIT 1
+                """
+                
+                cursor.execute(printer_query)
+                printer_data = cursor.fetchone()
+                
+                if printer_data:
+                    self.printer_ip = printer_data['IP']
+                    self.printer_port = printer_data['Port'] if printer_data['Port'] else 9100
+                    logging.info(f"Using printer from database: {self.printer_ip}:{self.printer_port}")
+                else:
+                    # If no printer found in DB, fall back to app settings
+                    with open('appSettings.json', 'r') as f:
+                        app_settings = json.load(f)
+                        printer_config = app_settings.get('PrinterConfig', {})
+                        self.printer_ip = printer_config.get('IP', "192.168.0.253")
+                        self.printer_port = printer_config.get('Port', 9100)
+                        logging.info(f"No printer in DB, using from appSettings: {self.printer_ip}:{self.printer_port}")
+                
+                cursor.close()
+                conn.close()
+            else:
+                raise Exception("Database connection failed")
+                
+        except Exception as e:
+            # Fall back to appSettings.json if database fetch fails
+            logging.error(f"Error fetching printer from database: {e}")
+            try:
+                with open('appSettings.json', 'r') as f:
+                    app_settings = json.load(f)
+                    printer_config = app_settings.get('PrinterConfig', {})
+                    self.printer_ip = printer_config.get('IP', "192.168.0.253")
+                    self.printer_port = printer_config.get('Port', 9100)
+                    logging.info(f"Falling back to printer from appSettings: {self.printer_ip}:{self.printer_port}")
+            except Exception as app_err:
+                # Absolute fallback to hardcoded values
+                logging.error(f"Error loading printer settings from appSettings.json: {app_err}")
+                self.printer_ip = "192.168.0.253"  # Default IP
+                self.printer_port = 9100  # Default port
+                logging.warning(f"Using hardcoded printer settings: {self.printer_ip}:{self.printer_port}")
         
         # Test printer availability
         self.test_printer_connection()
@@ -884,40 +1121,64 @@ class EzeeCanteen(QMainWindow):
         self.communicator.new_auth_event.connect(self.add_auth_event)
         self.auth_monitor.start()
         
-        # Load printer settings from appSettings.json if available
+        # Load header/footer settings from appSettings.json if available
         try:
             with open('appSettings.json', 'r') as f:
                 app_settings = json.load(f)
                 printer_config = app_settings.get('PrinterConfig', {})
-                self.printer_ip = printer_config.get('IP', "192.168.0.251")
-                self.printer_port = printer_config.get('Port', 9100)
                 self.header = printer_config.get('Header', {'enable': True, 'text': "EzeeCanteen"})
                 self.footer = printer_config.get('Footer', {'enable': True, 'text': "Thank you!"})
                 self.special_message = app_settings.get('CanteenMenu', {}).get('SpecialMessage', "")
         except Exception as e:
-            print(f"Error loading printer settings: {e}")
+            logging.error(f"Error loading header/footer settings: {e}")
+            self.header = {'enable': True, 'text': "EzeeCanteen"}
+            self.footer = {'enable': True, 'text': "Thank you!"}
     
     def test_printer_connections(self):
         """Test all configured printer connections"""
-        if self.device_printers:
-            # Test all configured printers
-            for device_ip, printer in self.device_printers.items():
-                try:
-                    # Check printer connection with timeout
-                    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    s.settimeout(1)  # 1 second timeout
-                    result = s.connect_ex((printer['ip'], printer['port']))
-                    s.close()
-                    
-                    printer['available'] = (result == 0)
-                    
-                    if printer['available']:
-                        logging.info(f"Printer {printer['ip']}:{printer['port']} connection successful (for device {device_ip})")
-                    else:
-                        logging.warning(f"Printer {printer['ip']}:{printer['port']} connection failed (for device {device_ip})")
-                except Exception as e:
-                    printer['available'] = False
-                    logging.error(f"Error testing printer {printer['ip']}:{printer['port']} (for device {device_ip}): {e}")
+        if not self.device_printers:
+            # Legacy mode - test the single printer
+            self.test_printer_connection()
+            return
+            
+        # Get unique printer IPs to avoid testing the same printer multiple times
+        unique_printers = {}
+        for device_ip, printer in self.device_printers.items():
+            printer_key = f"{printer['ip']}:{printer['port']}"
+            if printer_key not in unique_printers:
+                unique_printers[printer_key] = {
+                    'ip': printer['ip'],
+                    'port': printer['port'],
+                    'devices': []
+                }
+            unique_printers[printer_key]['devices'].append(device_ip)
+        
+        # Test each unique printer
+        for printer_key, printer_info in unique_printers.items():
+            try:
+                # Check printer connection with short timeout
+                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                s.settimeout(0.5)  # 0.5 second timeout for faster checks
+                result = s.connect_ex((printer_info['ip'], printer_info['port']))
+                s.close()
+                
+                available = (result == 0)
+                
+                # Update availability for all devices using this printer
+                for device_ip in printer_info['devices']:
+                    if device_ip in self.device_printers:
+                        self.device_printers[device_ip]['available'] = available
+                
+                if available:
+                    logging.info(f"Printer {printer_info['ip']}:{printer_info['port']} connection successful (for {len(printer_info['devices'])} devices)")
+                else:
+                    logging.warning(f"Printer {printer_info['ip']}:{printer_info['port']} connection failed (for {len(printer_info['devices'])} devices)")
+            except Exception as e:
+                # Handle socket errors gracefully
+                logging.error(f"Error testing printer {printer_info['ip']}:{printer_info['port']}: {e}")
+                for device_ip in printer_info['devices']:
+                    if device_ip in self.device_printers:
+                        self.device_printers[device_ip]['available'] = False
         else:
             # Legacy mode - test the single printer
             self.test_printer_connection()
@@ -933,13 +1194,13 @@ class EzeeCanteen(QMainWindow):
                     with open('appSettings.json', 'r') as f:
                         app_settings = json.load(f)
                         printer_config = app_settings.get('PrinterConfig', {})
-                        self.printer_ip = printer_config.get('IP', "192.168.0.251")
+                        self.printer_ip = printer_config.get('IP', "192.168.0.253")
                         self.printer_port = printer_config.get('Port', 9100)
                         self.header = printer_config.get('Header', {'enable': True, 'text': "EzeeCanteen"})
                         self.footer = printer_config.get('Footer', {'enable': True, 'text': "Thank you!"})
                         logging.info(f"Loaded printer config: IP={self.printer_ip}, Port={self.printer_port}")
                 except Exception as e:
-                    self.printer_ip = "192.168.0.251"
+                    self.printer_ip = "192.168.0.253"
                     self.printer_port = 9100
                     self.header = {'enable': True, 'text': "EzeeCanteen"}
                     self.footer = {'enable': True, 'text': "Thank you!"}
@@ -1024,6 +1285,43 @@ class EzeeCanteen(QMainWindow):
             else:
                 recognition_mode = "Unknown"  # This should never happen due to earlier check in add_auth_event
             
+            # Determine meal type based on current time
+            current_time = datetime.now().strftime('%H:%M')
+            meal_type = "MEAL"  # Default value
+            
+            # Read meal schedule from appSettings.json
+            try:
+                with open('appSettings.json', 'r') as f:
+                    app_settings = json.load(f)
+                    meal_schedule = app_settings.get('CanteenMenu', {}).get('MealSchedule', [])
+                    
+                    # Check which meal time range the current time falls into
+                    for meal in meal_schedule:
+                        from_time = meal.get('fromTime', '')
+                        to_time = meal.get('toTime', '')
+                        meal_type_value = meal.get('mealType', '')
+                        price = meal.get('price', '0')
+                        
+                        if from_time and to_time and meal_type_value and from_time <= current_time <= to_time:
+                            meal_type = meal_type_value.upper()
+                            total_price = price
+                            break
+                    else:
+                        # If no meal matches, default price is 0
+                        total_price = '0'
+            except Exception as e:
+                logging.error(f"Error determining meal type for database: {e}")
+                # Use fallback logic for meal type determination
+                current_hour = datetime.now().hour
+                if 6 <= current_hour < 11:
+                    meal_type = "BREAKFAST"
+                elif 11 <= current_hour < 15:
+                    meal_type = "LUNCH"
+                elif 15 <= current_hour < 18:
+                    meal_type = "SNACKS"
+                elif 18 <= current_hour < 22:
+                    meal_type = "DINNER"
+                total_price = '0'  # Default price if we can't determine from settings
             
             # Get attendance status
             if "AttendanceInfo" in event_data:
@@ -1055,7 +1353,7 @@ class EzeeCanteen(QMainWindow):
                     if monitor.ip == getattr(event_data, 'deviceIP', None):
                         device_ip = ip
                         break
-                    
+                
                 if not device_ip:
                     # If we couldn't determine the source, use the first active device
                     device_ip = next(iter(self.active_devices))
@@ -1067,8 +1365,9 @@ class EzeeCanteen(QMainWindow):
             sql = f"""
                 INSERT INTO {DB_TABLE} (
                     PunchCardNo, PunchDateTime, PunchPicURL, RecognitionMode, 
-                    IPAddress, AttendanceStatus, DB, AttInOut, Inserted, ZK_SerialNo, LogTransferDate, CanteenMode
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    IPAddress, AttendanceStatus, DB, AttInOut, Inserted, ZK_SerialNo, LogTransferDate, CanteenMode,
+                    Fooditem, totalAmount
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
             
             # Get device serial based on which device generated the event
@@ -1094,8 +1393,10 @@ class EzeeCanteen(QMainWindow):
                 att_in_out,                             # AttInOut
                 'Y',                                    # Inserted
                 serial_no,                              # ZK_SerialNo
-                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                'timeBase'                              # CanteenMode
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),  # LogTransferDate
+                'timeBase',                             # CanteenMode
+                meal_type,                              # Fooditem
+                total_price                             # totalAmount
             )
             
             # Execute query
@@ -1104,7 +1405,7 @@ class EzeeCanteen(QMainWindow):
             # Commit the transaction
             conn.commit()
             
-            print(f"Successfully inserted authentication data for employee {emp_id} into database")
+            print(f"Successfully inserted authentication data for employee {emp_id} with meal type {meal_type} into database")
             
         except Exception as e:
             print(f"Error inserting data into database: {e}")
@@ -1435,14 +1736,22 @@ class EzeeCanteen(QMainWindow):
             
             # Determine which device generated this event (to find the correct printer)
             source_ip = None
+            
+            # First check if source_device_ip is directly available in the event data
+            if 'source_device_ip' in event_data and event_data['source_device_ip'] in self.device_printers:
+                source_ip = event_data['source_device_ip']
+                logging.info(f"Using source device IP from event data: {source_ip}")
             # If we have multiple devices configured, try to determine which one generated this event
-            if self.active_devices:
-                # Try to match based on auth_monitor IP in each monitor
-                for device_ip, device_info in self.active_devices.items():
-                    monitor = device_info['monitor']
-                    if monitor.ip == getattr(event_data, 'deviceIP', None):
-                        source_ip = device_ip
-                        break
+            elif self.active_devices:
+                # Try to match based on device IP in event data
+                device_ip = event_data.get('deviceIP')
+                if device_ip:
+                    for active_ip, device_info in self.active_devices.items():
+                        monitor = device_info['monitor']
+                        if monitor.ip == device_ip:
+                            source_ip = active_ip
+                            logging.info(f"Matched device IP {device_ip} to active device {source_ip}")
+                            break
             
                 if not source_ip:
                     # If we couldn't determine the source, use the first active device
@@ -1456,8 +1765,6 @@ class EzeeCanteen(QMainWindow):
             
             if source_ip and source_ip in self.device_printers:
                 # Use the printer associated with this device
-                printer_available = True
-
                 printer = self.device_printers[source_ip]
                 printer_available = printer['available']
                 printer_ip = printer['ip']

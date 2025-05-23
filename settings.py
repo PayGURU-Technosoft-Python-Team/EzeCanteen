@@ -527,7 +527,7 @@ class EzeeCanteenWindow(QMainWindow):
         button_layout.setContentsMargins(0, 0, 0, 0)
         
         
-        display_button = QPushButton("Display")
+        display_button = QPushButton("Live Display")
         display_button.setStyleSheet("""
             QPushButton {
                 background-color: #4f46e5;
@@ -559,21 +559,6 @@ class EzeeCanteenWindow(QMainWindow):
         meal_button.clicked.connect(self.meal_settings)
         button_layout.addWidget(meal_button)
         
-        clear_cache_button = QPushButton("Clear Cache")
-        clear_cache_button.setStyleSheet("""
-            QPushButton {
-                background-color: #1e8188;
-                color: white;
-                padding: 8px 16px;
-                border-radius: 4px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #136066;
-            }
-        """)
-        clear_cache_button.clicked.connect(self.clear_cache)
-        button_layout.addWidget(clear_cache_button)
         
         button_group.setLayout(button_layout)
         header_layout.addWidget(button_group, alignment=Qt.AlignRight)
@@ -591,12 +576,13 @@ class EzeeCanteenWindow(QMainWindow):
         printer_title.setStyleSheet("font-size: 24px; font-weight: bold; border-bottom: 1px solid #374151; padding-bottom: 8px; margin-bottom: 6px;")
         printer_layout.addWidget(printer_title)
         
-        # Scrollable area for printers - full width
+        # Scrollable area for printers - full width with max height
         printers_scroll = QScrollArea()
         printers_scroll.setWidgetResizable(True)
         printers_scroll.setStyleSheet("border: none; background-color: transparent;")
         printers_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         printers_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        printers_scroll.setMaximumHeight(160)  # Set maximum height to limit vertical space
         
         self.printers_list = QWidget()
         self.printers_list.setStyleSheet("background-color: transparent;")
@@ -640,12 +626,13 @@ class EzeeCanteenWindow(QMainWindow):
         device_title.setStyleSheet("font-size: 22px; font-weight: bold; border-bottom: 1px solid #374151; padding-bottom: 8px; margin-bottom: 6px;")
         device_layout.addWidget(device_title)
         
-        # Scrollable area for devices - full width
+        # Scrollable area for devices - full width with max height
         devices_scroll = QScrollArea()
         devices_scroll.setWidgetResizable(True)
         devices_scroll.setStyleSheet("border: none; background-color: transparent;")
         devices_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         devices_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        devices_scroll.setMaximumHeight(160)  # Set maximum height to limit vertical space
         
         self.devices_list = QWidget()
         self.devices_list.setStyleSheet("background-color: transparent;")
@@ -1336,7 +1323,9 @@ class EzeeCanteenWindow(QMainWindow):
         self.saved_geometry = self.geometry()
         
         try:
-            # Create the EzeeCanteenApp instance
+            # Create the EzeeCanteenApp instance - fixed import reference
+            from CanteenSettings import EzeeCanteenApp
+            
             canteen_app = EzeeCanteenApp()
             
             # IMPORTANT: Disconnect the default "go_back" slot and connect our custom function

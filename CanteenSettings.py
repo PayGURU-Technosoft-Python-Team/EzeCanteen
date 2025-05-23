@@ -3,9 +3,11 @@ import json
 import os
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
                             QPushButton, QLabel, QRadioButton, QLineEdit, QTableWidget,
-                            QTableWidgetItem, QHeaderView, QFrame, QTimeEdit, QTextEdit)
+                            QTableWidgetItem, QHeaderView, QFrame, QTimeEdit, QTextEdit,
+                            QStackedWidget)
 from PyQt5.QtCore import Qt, QTime
 from PyQt5.QtGui import QFont, QIcon
+from reports import ReportsWidget
 
 class EzeeCanteenApp(QMainWindow):
     def __init__(self):
@@ -17,12 +19,29 @@ class EzeeCanteenApp(QMainWindow):
         # Track if we're running inside settings.py
         self.is_embedded = False
         
-        # Main widget and layout
-        main_widget = QWidget()
-        main_layout = QVBoxLayout(main_widget)
+        # Create stacked widget to switch between views
+        self.stacked_widget = QStackedWidget()
+        self.setCentralWidget(self.stacked_widget)
+        
+        # Create settings widget
+        self.settings_widget = QWidget()
+        self.setup_settings_ui()
+        
+        # Create reports widget
+        self.reports_widget = ReportsWidget(self)
+        
+        # Add widgets to stacked widget
+        self.stacked_widget.addWidget(self.settings_widget)
+        self.stacked_widget.addWidget(self.reports_widget)
+        
+        # Load settings from appSettings.json
+        self.load_settings()
+    
+    def setup_settings_ui(self):
+        # Main layout for settings
+        main_layout = QVBoxLayout(self.settings_widget)
         main_layout.setContentsMargins(20, 20, 20, 20)
         main_layout.setSpacing(15)
-        self.setCentralWidget(main_widget)
         
         # Header
         header_frame = QFrame()
@@ -154,9 +173,6 @@ class EzeeCanteenApp(QMainWindow):
         add_row_btn.clicked.connect(self.add_row)
         
         save_changes_btn = QPushButton("Save Changes")
-        # save_changes_btn.setStyleSheet(
-        #     "background-color: #10B981; border-radius: 4px; padding: 10px 20px; font-size: 14px; font-weight: bold;"
-        # )
         save_changes_btn.setStyleSheet(
             "QPushButton {"
             "    background-color: #10B981;"
@@ -212,9 +228,13 @@ class EzeeCanteenApp(QMainWindow):
         
         # Push everything up with a stretch at the bottom
         main_layout.addStretch()
-        
-        # Load settings from appSettings.json
-        self.load_settings()
+    
+    # Methods for switching between views
+    def show_settings_view(self):
+        self.stacked_widget.setCurrentIndex(0)
+    
+    def show_reports_view(self):
+        self.stacked_widget.setCurrentIndex(1)
     
     def create_time_row(self):
         """Create a new time row with all necessary widgets"""
@@ -434,6 +454,7 @@ class EzeeCanteenApp(QMainWindow):
     
     def get_reports(self):
         print("Get Reports button clicked")
+        self.show_reports_view()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
