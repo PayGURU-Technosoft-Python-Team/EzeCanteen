@@ -8,6 +8,7 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QH
 from PyQt5.QtCore import Qt, QTime
 from PyQt5.QtGui import QFont, QIcon
 from reports import ReportsWidget
+from AddMail import MailSettingsWindow
 
 class EzeeCanteenApp(QMainWindow):
     def __init__(self):
@@ -451,6 +452,8 @@ class EzeeCanteenApp(QMainWindow):
     
     def add_mail(self):
         print("Add Mail button clicked")
+        self.mail_window = MailSettingsWindow(self)
+        self.mail_window.show()
     
     def get_reports(self):
         print("Get Reports button clicked")

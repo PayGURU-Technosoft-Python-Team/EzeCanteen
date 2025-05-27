@@ -6,7 +6,7 @@ from datetime import datetime
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
                             QLabel, QLineEdit, QComboBox, QRadioButton, QTextEdit,
                             QPushButton, QMessageBox, QFrame, QButtonGroup)
-from PyQt5.QtCore import Qt, QSettings
+from PyQt5.QtCore import Qt, QSettings, pyqtSignal
 from PyQt5.QtGui import QFont
 
 # Database configuration
@@ -17,10 +17,17 @@ DB_PASS = "L^{Z,8~zzfF9(nd8"
 DB_NAME = "payguru_canteen"
 
 class PrinterSetupWindow(QMainWindow):
-    def __init__(self):
+    # Signal for when printer is saved
+    printer_saved = pyqtSignal(dict)
+    
+    def __init__(self, edit_printer=None):
         super().__init__()
         self.setWindowTitle("EzeeCanteen")
         self.resize(650, 700)
+        
+        # Store printer data if editing
+        self.edit_mode = edit_printer is not None
+        self.edit_printer = edit_printer or {}
         
         # Set dark theme
         self.setStyleSheet("""
@@ -95,7 +102,8 @@ class PrinterSetupWindow(QMainWindow):
         title_frame = QFrame()
         title_frame.setObjectName("titleFrame")
         title_layout = QVBoxLayout(title_frame)
-        title_label = QLabel("Add New Printer")
+        title_text = "Edit Printer" if self.edit_mode else "Add New Printer"
+        title_label = QLabel(title_text)
         title_label.setFont(QFont("Arial", 14, QFont.Bold))
         title_layout.addWidget(title_label)
         frame_layout.addWidget(title_frame)
@@ -107,14 +115,15 @@ class PrinterSetupWindow(QMainWindow):
         button_layout = QHBoxLayout()
         button_layout.setAlignment(Qt.AlignRight)
         
-        back_button = QPushButton("Back")
-        back_button.setObjectName("backButton")
+        self.back_button = QPushButton("Back")
+        self.back_button.setObjectName("backButton")
         
-        save_button = QPushButton("Save Printer")
+        save_text = "Update Printer" if self.edit_mode else "Save Printer"
+        save_button = QPushButton(save_text)
         save_button.setObjectName("saveButton")
         save_button.clicked.connect(self.save_printer)
         
-        button_layout.addWidget(back_button)
+        button_layout.addWidget(self.back_button)
         button_layout.addWidget(save_button)
         frame_layout.addLayout(button_layout)
         
@@ -123,6 +132,49 @@ class PrinterSetupWindow(QMainWindow):
         footer_label.setObjectName("footerLabel")
         footer_label.setAlignment(Qt.AlignCenter)
         main_layout.addWidget(footer_label)
+        
+        # Populate form if in edit mode
+        if self.edit_mode:
+            self.populate_form()
+    
+    def populate_form(self):
+        """Populate form fields with data from the printer being edited"""
+        if not self.edit_printer:
+            return
+            
+        # Set basic fields
+        self.printer_name.setText(self.edit_printer.get('name', ''))
+        
+        # Set printer type
+        printer_type = self.edit_printer.get('type', '').capitalize()
+        index = self.printer_type.findText(printer_type)
+        if index >= 0:
+            self.printer_type.setCurrentIndex(index)
+            
+        self.printer_ip.setText(self.edit_printer.get('ip', ''))
+        self.printer_port.setText(str(self.edit_printer.get('port', '9100')))
+        
+        # Set font size
+        font_size = self.edit_printer.get('fontSize', '')
+        for i in range(self.font_size.count()):
+            if self.font_size.itemData(i) == font_size:
+                self.font_size.setCurrentIndex(i)
+                break
+        
+        # Set header/footer if available
+        header = self.edit_printer.get('header', {})
+        if header.get('enable', False):
+            self.enable_header.setChecked(True)
+        else:
+            self.disable_header.setChecked(True)
+        self.token_header.setText(header.get('text', ''))
+        
+        footer = self.edit_printer.get('footer', {})
+        if footer.get('enable', False):
+            self.enable_footer.setChecked(True)
+        else:
+            self.disable_footer.setChecked(True)
+        self.token_footer.setText(footer.get('text', ''))
     
     def create_form_fields(self, layout):
         # Printer Name
@@ -136,7 +188,7 @@ class PrinterSetupWindow(QMainWindow):
         self.printer_type = QComboBox()
         self.printer_type.addItems(["Thermal", "Inkjet", "Laser"])
         layout.addWidget(self.printer_type)
-        
+             
         # Printer IP
         layout.addWidget(QLabel("Printer IP"))
         self.printer_ip = QLineEdit()
@@ -273,32 +325,6 @@ class PrinterSetupWindow(QMainWindow):
             
             cursor = conn.cursor()
             
-            # Get next device number
-            device_number = self.get_next_device_number(cursor, printer_name)
-            
-            # Current timestamp
-            now = datetime.now()
-            formatted_now = now.strftime('%Y-%m-%d %H:%M:%S')
-            
-            # Default username/password for printers
-            username = "admin"
-            password = "admin"
-            
-            # Prepare SQL statement
-            sql = """
-            INSERT INTO configh (
-                DeviceType, DeviceNumber, IP, Port, DeviceLocation, ComUser, 
-                comKey, Enable, CreatedDateTime, DevicePrinterIP
-            ) VALUES (
-                %s, %s, %s, %s, %s, %s, 
-                AES_ENCRYPT(%s, SHA2(CONCAT('pg2175', %s), 512)), 
-                %s, %s, %s
-            )
-            """
-            
-            # Set enable value - Enable by default
-            enable_value = 'Y'
-            
             # Convert header/footer to location text
             location = f"FontSize:{font_size}"
             if header["enable"]:
@@ -306,45 +332,108 @@ class PrinterSetupWindow(QMainWindow):
             if footer["enable"]:
                 location += f"|Footer:{footer['text']}"
             
-            # Execute SQL with values
-            values = (
-                printer_name,  # DeviceType
-                device_number,
-                printer_ip,    # IP
-                printer_port,
-                location,
-                username,
-                password,
-                formatted_now,  # Pass timestamp for encryption
-                enable_value,
-                formatted_now,  # CreatedDateTime field
-                ""  # DevicePrinterIP - empty for printers
-            )
+            # Set enable value - Enable by default
+            enable_value = 'Y'
             
-            cursor.execute(sql, values)
-            conn.commit()
+            if self.edit_mode:
+                # Update existing printer
+                device_number = self.edit_printer.get('deviceNumber', 1)
+                
+                # Prepare SQL statement for update
+                sql = """
+                UPDATE configh SET
+                    IP = %s,
+                    Port = %s,
+                    DeviceLocation = %s,
+                    Enable = %s
+                WHERE DeviceType = %s AND DeviceNumber = %s
+                """
+                
+                # Execute SQL with values
+                values = (
+                    printer_ip,
+                    printer_port,
+                    location,
+                    enable_value,
+                    printer_name,  # Use name as DeviceType
+                    device_number
+                )
+                
+                cursor.execute(sql, values)
+                conn.commit()
+                
+                QMessageBox.information(self, "Success", "Printer updated successfully!")
+            else:
+                # Get next device number for new printer
+                device_number = self.get_next_device_number(cursor, printer_name)
+                
+                # Current timestamp
+                now = datetime.now()
+                formatted_now = now.strftime('%Y-%m-%d %H:%M:%S')
+                
+                # Default username/password for printers
+                username = "admin"
+                password = "admin"
+                
+                # Prepare SQL statement for insert
+                sql = """
+                INSERT INTO configh (
+                    DeviceType, DeviceNumber, IP, Port, ComUser, 
+                    comKey, Enable, CreatedDateTime, DevicePrinterIP
+                ) VALUES (
+                     %s, %s, %s, %s, %s, 
+                    AES_ENCRYPT(%s, SHA2(CONCAT('pg2175', %s), 512)), 
+                    %s, %s, %s
+                )
+                """
+                
+                # Execute SQL with values
+                values = (
+                    printer_name,  # DeviceType
+                    device_number,
+                    printer_ip,    # IP
+                    printer_port,
+                    username,
+                    password,
+                    formatted_now,  # Pass timestamp for encryption
+                    enable_value,
+                    formatted_now,  # CreatedDateTime field
+                    ""  # DevicePrinterIP - empty for printers
+                )
+                
+                cursor.execute(sql, values)
+                conn.commit()
+                
+                QMessageBox.information(self, "Success", "Printer saved successfully to database!")
             
-            # Also save to JSON for compatibility
-            new_printer = {
+            # Prepare printer data for JSON and signal
+            saved_printer = {
                 "name": printer_name,
                 "type": printer_type,
                 "ip": printer_ip,
                 "port": printer_port,
+                "deviceNumber": device_number,
+                "enable": enable_value, 
                 "fontSize": font_size,
                 "header": header,
-                "footer": footer
+                "footer": footer,
+                "location": location
             }
-            self.save_to_json(new_printer)
             
-            QMessageBox.information(self, "Success", "Printer saved successfully to database!")
+            # Also save to JSON for compatibility
+            self.save_to_json(saved_printer)
             
-            # Clear form fields
-            self.printer_name.clear()
-            self.printer_ip.clear()
-            self.printer_port.clear()
-            self.font_size.setCurrentIndex(0)
-            self.token_header.clear()
-            self.token_footer.clear()
+            # Emit signal with saved printer data
+            self.printer_saved.emit(saved_printer)
+            
+            # Clear form fields if not editing
+            if not self.edit_mode:
+                self.printer_name.clear()
+                self.printer_ip.clear()
+                self.printer_port.clear()
+                self.font_size.setCurrentIndex(0)
+                self.token_header.clear()
+                self.token_footer.clear()
             
         except mysql.connector.Error as err:
             QMessageBox.critical(self, "Database Error", f"Failed to save printer: {str(err)}")
@@ -378,15 +467,24 @@ class PrinterSetupWindow(QMainWindow):
             print(f"Error saving settings: {e}")
             return False
             
-    def save_to_json(self, new_printer):
+    def save_to_json(self, printer_data):
         """Save the printer information to JSON file for compatibility"""
         # Load current settings
         settings = self.load_settings()
         
-        # Add new printer
-        if "printers" not in settings:
-            settings["printers"] = []
-        settings["printers"].append(new_printer)
+        if self.edit_mode:
+            # Update existing printer in JSON
+            if "printers" in settings:
+                for i, printer in enumerate(settings["printers"]):
+                    if (printer.get('name') == self.edit_printer.get('name') and 
+                        printer.get('ip') == self.edit_printer.get('ip')):
+                        settings["printers"][i] = printer_data
+                        break
+        else:
+            # Add new printer
+            if "printers" not in settings:
+                settings["printers"] = []
+            settings["printers"].append(printer_data)
         
         # Save settings
         self.save_settings(settings)

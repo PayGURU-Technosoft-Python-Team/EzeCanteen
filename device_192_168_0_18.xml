@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<DeviceInfo version="2.0" xmlns="http://www.isapi.org/ver20/XMLSchema">
+<deviceName>Access Controller</deviceName>
+<deviceID>255</deviceID>
+<model>DS-K1T320MWX</model>
+<serialNumber>DS-K1T320MWX20221110V030500ENK99840079</serialNumber>
+<macAddress>BC:9B:5E:3D:2E:06</macAddress>
+<firmwareVersion>V3.5.0</firmwareVersion>
+<firmwareReleasedDate>build 221110</firmwareReleasedDate>
+<encoderVersion>V2.7</encoderVersion>
+<encoderReleasedDate>build 221108</encoderReleasedDate>
+<deviceType>ACS</deviceType>
+<telecontrolID>1</telecontrolID>
+<localZoneNum>0</localZoneNum>
+<alarmOutNum>0</alarmOutNum>
+<electroLockNum>1</electroLockNum>
+<manufacturer>hikvision</manufacturer>
+<OEMCode>1</OEMCode>
+<marketType>1</marketType>
+</DeviceInfo>

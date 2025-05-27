@@ -24,10 +24,10 @@ from print import print_slip  # Import print_slip function
 from PyQt5 import sip
 
 # Default device configuration (will be used if DB fetch fails)
-IP = "192.168.0.86"
+IP = "192.168.0.85"
 PORT = 80
 USERNAME = "admin"
-PASSWORD = "a1234@d321"
+PASSWORD = "a1234@4321"
 
 # Database configuration
 DB_HOST = "103.216.211.36"
@@ -134,6 +134,7 @@ def fetch_device_config():
                     'name': device.get('DeviceName', 'CITIZEN'),
                     'location': device.get('DeviceLocation', '')
                 }
+                logging.info(f"Found printer in database: {device['IP']}:{device.get('Port', 9100)} ({device.get('DeviceName', 'CITIZEN')})")
         
         # Second pass: process authentication devices and link them to printers
         for device in results:
@@ -159,6 +160,8 @@ def fetch_device_config():
                 
                 # Find associated printer from DevicePrinterIP
                 printer_ip = device.get('DevicePrinterIP', '')
+                
+                logging.info(f"Processing device {device_ip} with DevicePrinterIP: {printer_ip}")
                 
                 # If printer IP is not in our map, create a virtual printer entry
                 if printer_ip and printer_ip not in printer_ip_map:
@@ -270,7 +273,8 @@ def getDeviceDetails(ip, port, user, psw):
     try:
         # Log authentication attempt (sanitize password)
         masked_password = psw[:2] + "*" * (len(psw) - 4) + psw[-2:] if len(psw) > 4 else "****"
-        logging.info(f"Getting device details for {ip}:{port} with user: {user}, password length: {len(psw)}")
+        logging.info(f"Getting device details for {ip}:{port} with user: {user}, password length: {len(psw)} {psw}")
+        print(f"Getting device details for {ip}:{port} with user: {user}, password length: {len(psw)} {psw}")
        
         response = requests.get(url, auth=HTTPDigestAuth(
             user, psw), headers=headers, data=payload, timeout=5)
@@ -1003,10 +1007,13 @@ class EzeeCanteen(QMainWindow):
                 # Store printer configuration for this device
                 self.device_printers[device_ip] = {
                     'ip': printer_config['ip'],
-                    'port': printer_config['port'],
+                    'port': printer_config.get('port', 9100),
                     'name': printer_config.get('name', 'CITIZEN'),
                     'available': False  # Will be set by test_printer_connections
                 }
+                
+                # Log the device-to-printer mapping
+                logging.info(f"Device {device_ip} mapped to printer {printer_config['ip']}:{printer_config.get('port', 9100)}")
                 
                 # Get device serial and MAC
                 device_serial, device_mac = getDeviceDetails(
@@ -1154,6 +1161,7 @@ class EzeeCanteen(QMainWindow):
             unique_printers[printer_key]['devices'].append(device_ip)
         
         # Test each unique printer
+        logging.info(f"Testing {len(unique_printers)} unique printer connections")
         for printer_key, printer_info in unique_printers.items():
             try:
                 # Check printer connection with short timeout
@@ -1736,16 +1744,18 @@ class EzeeCanteen(QMainWindow):
             
             # Determine which device generated this event (to find the correct printer)
             source_ip = None
+            printer_ip = None
+            printer_port = None
             
             # First check if source_device_ip is directly available in the event data
-            if 'source_device_ip' in event_data and event_data['source_device_ip'] in self.device_printers:
+            if 'source_device_ip' in event_data:
                 source_ip = event_data['source_device_ip']
                 logging.info(f"Using source device IP from event data: {source_ip}")
-            # If we have multiple devices configured, try to determine which one generated this event
-            elif self.active_devices:
-                # Try to match based on device IP in event data
-                device_ip = event_data.get('deviceIP')
-                if device_ip:
+            # If source_device_ip is not in event data, try to determine it from deviceIP
+            elif 'deviceIP' in event_data:
+                device_ip = event_data['deviceIP']
+                # Try to find a matching device in active_devices
+                if hasattr(self, 'active_devices') and self.active_devices:
                     for active_ip, device_info in self.active_devices.items():
                         monitor = device_info['monitor']
                         if monitor.ip == device_ip:
@@ -1753,16 +1763,15 @@ class EzeeCanteen(QMainWindow):
                             logging.info(f"Matched device IP {device_ip} to active device {source_ip}")
                             break
             
-                if not source_ip:
-                    # If we couldn't determine the source, use the first active device
-                    source_ip = next(iter(self.active_devices))
-                    logging.warning(f"Could not determine source device for event. Using {source_ip}")
+            # If we still don't have a source IP but have active devices, use the first one
+            if not source_ip and hasattr(self, 'active_devices') and self.active_devices:
+                source_ip = next(iter(self.active_devices))
+                logging.warning(f"Could not determine source device for event. Using {source_ip}")
             
             # Check if printer is available and print token
             printer_available = False
-            printer_ip = None
-            printer_port = None
             
+            # If we have a source IP and it's in our device_printers map, use that printer
             if source_ip and source_ip in self.device_printers:
                 # Use the printer associated with this device
                 printer = self.device_printers[source_ip]
@@ -1770,6 +1779,7 @@ class EzeeCanteen(QMainWindow):
                 printer_ip = printer['ip']
                 printer_port = printer['port']
                 logging.info(f"Using printer {printer_ip}:{printer_port} for device {source_ip}")
+            # Legacy fallback - if no device-specific printer found but we have a default printer
             elif hasattr(self, 'printer_available') and self.printer_available:
                 # Legacy mode - use the single printer
                 printer_available = self.printer_available
@@ -1777,9 +1787,11 @@ class EzeeCanteen(QMainWindow):
                 printer_port = self.printer_port
                 logging.info(f"Using legacy printer {printer_ip}:{printer_port}")
             
-            print(f"printer_available: {printer_available}")
-            print(f"printer_ip: {printer_ip}")
-            print(f"printer_port: {printer_port}")
+            # Log the printer selection information
+            print(f"Device source: {source_ip}")
+            print(f"Selected printer: {printer_ip}:{printer_port}")
+            print(f"Printer available: {printer_available}")
+            
             # Attempt to print token if printer is available
             if printer_available and printer_ip and printer_port:
                 try:

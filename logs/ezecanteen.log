@@ -733,3 +733,131 @@ task: <Task pending name='Task-2' coro=<EzeeCanteenWindow.initialize_toggle_stat
 2025-05-21 16:49:08,805 - root - WARNING - Printer connection failed (192.168.0.251:9100)
 2025-05-21 16:49:09,460 - root - INFO - Auth event monitoring stopping...
 2025-05-21 16:49:09,460 - root - INFO - Auth event monitoring stopped
+2025-05-26 13:09:40,542 - root - INFO - EzeeCanteen application starting
+2025-05-26 13:09:40,548 - root - INFO - Testing database connection to 103.216.211.36:33975
+2025-05-26 13:09:40,694 - root - INFO - Database connection successful
+2025-05-26 13:09:40,695 - root - WARNING - No devices configured. Using default device configuration.
+2025-05-26 13:09:40,696 - root - INFO - Getting device details for 192.168.0.86:80 with user: admin, password length: 10
+2025-05-26 13:09:45,707 - root - ERROR - Timeout connecting to 192.168.0.86:80
+2025-05-26 13:09:45,707 - root - INFO - Device details initialized: Serial=, MAC=
+2025-05-26 13:09:45,886 - root - INFO - No printer in DB, using from appSettings: 192.168.0.253:9100
+2025-05-26 13:09:46,890 - root - WARNING - Printer connection failed (192.168.0.253:9100)
+2025-05-26 13:09:46,891 - root - INFO - Meal schedule configured: 10:09 to 15:40
+2025-05-26 13:09:46,891 - root - INFO - AuthEventMonitor using default device: 192.168.0.86:80
+2025-05-26 13:09:46,892 - root - INFO - AuthEventMonitor initialized with endpoint: http://192.168.0.86:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-26 13:09:46,892 - root - INFO - Starting to monitor events from: 2025-05-26 13:09:46.891068
+2025-05-26 13:09:46,893 - root - INFO - Auth event monitoring started
+2025-05-26 13:09:46,895 - root - INFO - Entered meal time period. Updated start time to: 2025-05-26 13:09:46.895486
+2025-05-26 13:09:55,956 - asyncio - ERROR - Task was destroyed but it is pending!
+task: <Task pending name='Task-1' coro=<EzeeCanteenWindow.load_settings() running at e:\Work\Actual-EzeCanteen\settings.py:840> cb=[EzeeCanteenWindow.__init__.<locals>.<lambda>() at e:\Work\Actual-EzeCanteen\settings.py:161]>
+2025-05-26 13:09:55,957 - asyncio - ERROR - Task was destroyed but it is pending!
+task: <Task pending name='Task-2' coro=<EzeeCanteenWindow.initialize_toggle_state() running at e:\Work\Actual-EzeCanteen\settings.py:689> cb=[EzeeCanteenWindow.__init__.<locals>.<lambda>() at e:\Work\Actual-EzeCanteen\settings.py:162]>
+2025-05-26 13:09:55,958 - asyncio - ERROR - Task was destroyed but it is pending!
+task: <Task pending name='Task-3' coro=<EzeeCanteenWindow.save_settings_mock() running at e:\Work\Actual-EzeCanteen\settings.py:1756>>
+2025-05-26 13:09:55,959 - asyncio - ERROR - Task was destroyed but it is pending!
+task: <Task pending name='Task-4' coro=<EzeeCanteenWindow.save_settings_mock() running at e:\Work\Actual-EzeCanteen\settings.py:1756>>
+2025-05-26 13:16:19,168 - root - INFO - EzeeCanteen application starting
+2025-05-26 13:16:19,175 - root - INFO - Testing database connection to 103.216.211.36:33975
+2025-05-26 13:16:19,337 - root - INFO - Database connection successful
+2025-05-26 13:16:19,338 - root - WARNING - No devices configured. Using default device configuration.
+2025-05-26 13:16:19,338 - root - INFO - Getting device details for 192.168.0.86:80 with user: admin, password length: 10
+2025-05-26 13:16:24,354 - root - ERROR - Timeout connecting to 192.168.0.86:80
+2025-05-26 13:16:24,355 - root - INFO - Device details initialized: Serial=, MAC=
+2025-05-26 13:16:24,529 - root - INFO - No printer in DB, using from appSettings: 192.168.0.253:9100
+2025-05-26 13:16:25,535 - root - WARNING - Printer connection failed (192.168.0.253:9100)
+2025-05-26 13:16:25,536 - root - INFO - Meal schedule configured: 10:09 to 15:40
+2025-05-26 13:16:25,537 - root - INFO - AuthEventMonitor using default device: 192.168.0.86:80
+2025-05-26 13:16:25,538 - root - INFO - AuthEventMonitor initialized with endpoint: http://192.168.0.86:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-26 13:16:25,539 - root - INFO - Starting to monitor events from: 2025-05-26 13:16:25.536156
+2025-05-26 13:16:25,541 - root - INFO - Auth event monitoring started
+2025-05-26 13:16:25,548 - root - INFO - Entered meal time period. Updated start time to: 2025-05-26 13:16:25.547819
+2025-05-26 13:16:46,612 - root - ERROR - Timeout connecting to 192.168.0.86:80
+2025-05-26 13:17:10,656 - root - ERROR - Timeout connecting to 192.168.0.86:80
+2025-05-26 13:17:26,542 - root - WARNING - Printer connection failed (192.168.0.253:9100)
+2025-05-26 13:17:34,696 - root - ERROR - Timeout connecting to 192.168.0.86:80
+2025-05-26 13:17:46,237 - root - INFO - EzeeCanteen application starting
+2025-05-26 13:17:46,243 - root - INFO - Testing database connection to 103.216.211.36:33975
+2025-05-26 13:17:46,388 - root - INFO - Database connection successful
+2025-05-26 13:17:46,390 - root - WARNING - No devices configured. Using default device configuration.
+2025-05-26 13:17:46,391 - root - INFO - Getting device details for 192.168.0.82:80 with user: admin, password length: 10
+2025-05-26 13:17:46,446 - root - ERROR - Authentication failed (401 Unauthorized) for 192.168.0.82:80 with user: admin. Check credentials.
+2025-05-26 13:17:46,448 - root - INFO - Device details initialized: Serial=, MAC=
+2025-05-26 13:17:46,630 - root - INFO - No printer in DB, using from appSettings: 192.168.0.253:9100
+2025-05-26 13:17:47,639 - root - WARNING - Printer connection failed (192.168.0.253:9100)
+2025-05-26 13:17:47,642 - root - INFO - Meal schedule configured: 10:09 to 15:40
+2025-05-26 13:17:47,643 - root - INFO - AuthEventMonitor using default device: 192.168.0.82:80
+2025-05-26 13:17:47,644 - root - INFO - AuthEventMonitor initialized with endpoint: http://192.168.0.82:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-26 13:17:47,646 - root - INFO - Starting to monitor events from: 2025-05-26 13:17:47.641729
+2025-05-26 13:17:47,648 - root - INFO - Auth event monitoring started
+2025-05-26 13:17:47,657 - root - INFO - Entered meal time period. Updated start time to: 2025-05-26 13:17:47.657100
+2025-05-26 13:17:47,690 - root - ERROR - API request failed with status code: 401
+2025-05-26 13:17:47,691 - root - WARNING - Authentication failed. Attempting to refresh credentials.
+2025-05-26 13:17:47,692 - root - INFO - Retrying connection to http://192.168.0.82:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-26 13:17:48,738 - root - ERROR - API request failed with status code: 401
+2025-05-26 13:17:48,738 - root - WARNING - Authentication failed. Attempting to refresh credentials.
+2025-05-26 13:17:48,739 - root - INFO - Retrying connection to http://192.168.0.82:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-26 13:17:49,771 - root - ERROR - API request failed with status code: 401
+2025-05-26 13:17:49,772 - root - WARNING - Authentication failed. Attempting to refresh credentials.
+2025-05-26 13:17:49,772 - root - INFO - Retrying connection to http://192.168.0.82:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-26 13:17:50,815 - root - ERROR - API request failed with status code: 401
+2025-05-26 13:17:50,816 - root - WARNING - Authentication failed. Attempting to refresh credentials.
+2025-05-26 13:17:50,817 - root - INFO - Retrying connection to http://192.168.0.82:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-26 13:17:51,855 - root - ERROR - API request failed with status code: 401
+2025-05-26 13:17:51,856 - root - WARNING - Authentication failed. Attempting to refresh credentials.
+2025-05-26 13:17:51,856 - root - INFO - Retrying connection to http://192.168.0.82:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-26 13:17:51,856 - root - WARNING - Reached 5 consecutive errors. Resetting connection...
+2025-05-26 13:17:51,857 - root - INFO - Retrying connection to http://192.168.0.82:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-26 13:18:09,521 - root - INFO - EzeeCanteen application starting
+2025-05-26 13:18:09,527 - root - INFO - Testing database connection to 103.216.211.36:33975
+2025-05-26 13:18:09,674 - root - INFO - Database connection successful
+2025-05-26 13:18:09,675 - root - WARNING - No devices configured. Using default device configuration.
+2025-05-26 13:18:09,676 - root - INFO - Getting device details for 192.168.0.82:80 with user: admin, password length: 10
+2025-05-26 13:18:09,723 - root - ERROR - Authentication failed (401 Unauthorized) for 192.168.0.82:80 with user: admin. Check credentials.
+2025-05-26 13:18:09,724 - root - INFO - Device details initialized: Serial=, MAC=
+2025-05-26 13:18:09,898 - root - INFO - No printer in DB, using from appSettings: 192.168.0.253:9100
+2025-05-26 13:18:10,903 - root - WARNING - Printer connection failed (192.168.0.253:9100)
+2025-05-26 13:18:10,906 - root - INFO - Meal schedule configured: 10:09 to 15:40
+2025-05-26 13:18:10,907 - root - INFO - AuthEventMonitor using default device: 192.168.0.82:80
+2025-05-26 13:18:10,908 - root - INFO - AuthEventMonitor initialized with endpoint: http://192.168.0.82:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-26 13:18:10,909 - root - INFO - Starting to monitor events from: 2025-05-26 13:18:10.905176
+2025-05-26 13:18:10,911 - root - INFO - Auth event monitoring started
+2025-05-26 13:18:10,920 - root - INFO - Entered meal time period. Updated start time to: 2025-05-26 13:18:10.920375
+2025-05-26 13:18:10,968 - root - ERROR - API request failed with status code: 401
+2025-05-26 13:18:10,969 - root - WARNING - Authentication failed. Attempting to refresh credentials.
+2025-05-26 13:18:10,969 - root - INFO - Retrying connection to http://192.168.0.82:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-26 13:18:12,022 - root - ERROR - API request failed with status code: 401
+2025-05-26 13:18:12,023 - root - WARNING - Authentication failed. Attempting to refresh credentials.
+2025-05-26 13:18:12,024 - root - INFO - Retrying connection to http://192.168.0.82:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-26 13:18:13,080 - root - ERROR - API request failed with status code: 401
+2025-05-26 13:18:13,082 - root - WARNING - Authentication failed. Attempting to refresh credentials.
+2025-05-26 13:18:13,083 - root - INFO - Retrying connection to http://192.168.0.82:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-26 13:18:14,127 - root - ERROR - API request failed with status code: 401
+2025-05-26 13:18:14,128 - root - WARNING - Authentication failed. Attempting to refresh credentials.
+2025-05-26 13:18:14,129 - root - INFO - Retrying connection to http://192.168.0.82:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-26 13:18:15,160 - root - ERROR - API request failed with status code: 401
+2025-05-26 13:18:15,160 - root - WARNING - Authentication failed. Attempting to refresh credentials.
+2025-05-26 13:18:15,161 - root - INFO - Retrying connection to http://192.168.0.82:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-26 13:18:15,161 - root - WARNING - Reached 5 consecutive errors. Resetting connection...
+2025-05-26 13:18:15,161 - root - INFO - Retrying connection to http://192.168.0.82:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-26 13:18:26,188 - root - ERROR - API request failed with status code: 401
+2025-05-26 13:18:26,189 - root - WARNING - Authentication failed. Attempting to refresh credentials.
+2025-05-26 13:18:26,189 - root - INFO - Retrying connection to http://192.168.0.82:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-26 13:19:14,979 - root - INFO - EzeeCanteen application starting
+2025-05-26 13:19:14,984 - root - INFO - Testing database connection to 103.216.211.36:33975
+2025-05-26 13:19:15,130 - root - INFO - Database connection successful
+2025-05-26 13:19:15,131 - root - WARNING - No devices configured. Using default device configuration.
+2025-05-26 13:19:15,132 - root - INFO - Getting device details for 192.168.0.85:80 with user: admin, password length: 10
+2025-05-26 13:19:20,138 - root - ERROR - Timeout connecting to 192.168.0.85:80
+2025-05-26 13:19:20,139 - root - INFO - Device details initialized: Serial=, MAC=
+2025-05-26 13:19:20,310 - root - INFO - No printer in DB, using from appSettings: 192.168.0.253:9100
+2025-05-26 13:19:21,320 - root - WARNING - Printer connection failed (192.168.0.253:9100)
+2025-05-26 13:19:21,323 - root - INFO - Meal schedule configured: 10:09 to 15:40
+2025-05-26 13:19:21,324 - root - INFO - AuthEventMonitor using default device: 192.168.0.85:80
+2025-05-26 13:19:21,325 - root - INFO - AuthEventMonitor initialized with endpoint: http://192.168.0.85:80/ISAPI/AccessControl/AcsEvent?format=json
+2025-05-26 13:19:21,326 - root - INFO - Starting to monitor events from: 2025-05-26 13:19:21.322426
+2025-05-26 13:19:21,344 - root - INFO - Auth event monitoring started
+2025-05-26 13:19:21,353 - root - INFO - Entered meal time period. Updated start time to: 2025-05-26 13:19:21.353237
+2025-05-26 13:19:42,402 - root - ERROR - Timeout connecting to 192.168.0.85:80
+2025-05-26 13:20:06,455 - root - ERROR - Timeout connecting to 192.168.0.85:80
+2025-05-26 13:20:22,346 - root - WARNING - Printer connection failed (192.168.0.253:9100)
+2025-05-26 13:20:30,501 - root - ERROR - Timeout connecting to 192.168.0.85:80

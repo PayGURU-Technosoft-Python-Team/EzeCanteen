@@ -90,7 +90,7 @@ if __name__ == "__main__":
     header = {'enable': True, 'text': "COMPANY NAME"}
     coupon_type = "LUNCH COUPON"
     user_id = "EMP001"
-    user_name = "Rupesh Kaam karle"
+    user_name = ""
     punch_time = "2025-05-15 12:30:00"
     special_message = "Valid only for today"
     footer = {'enable': True, 'text': "Thank you!"}

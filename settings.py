@@ -4,12 +4,16 @@ from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
     QLabel, QCheckBox, QLineEdit, QFrame, QScrollArea, QDialog, QProgressBar, QMessageBox, QSizePolicy
 )
-from PyQt5.QtCore import Qt, QTimer, QPropertyAnimation, QEasingCurve, QRect
+from PyQt5.QtCore import Qt, QTimer, QPropertyAnimation, QEasingCurve, QRect, QDateTime
 from PyQt5.QtGui import QColor
 import os
 import mysql.connector  # Added for database connection
 from PyQt5 import sip
 import json
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import datetime
+from datetime import timedelta
+from AddMail import send_daily_report_email
 
 # Database configuration
 DB_HOST = "103.216.211.36"
@@ -169,6 +173,14 @@ class EzeeCanteenWindow(QMainWindow):
         
         # Call manual load method after a short delay to ensure UI is shown first
         QTimer.singleShot(500, self.manually_run_load_settings)
+        
+        # Set up auto mail timer to check every 10 minutes
+        self.auto_mail_timer = QTimer(self)
+        self.auto_mail_timer.timeout.connect(self.check_and_send_auto_email)
+        self.auto_mail_timer.start(600000)  # 600000 ms = 10 minutes
+        
+        # Initial check for auto email
+        QTimer.singleShot(5000, self.check_and_send_auto_email)
     
     def manually_run_load_settings(self):
         """Manual backup method to load settings if the async method fails"""
@@ -243,7 +255,7 @@ class EzeeCanteenWindow(QMainWindow):
                         # Only use mock data as last resort
                         print("❌ Alternative connection failed, using mock data")
                         self.printers = [
-                            {'name': 'CITIZEN', 'ip': '192.168.0.251', 'type': 'thermal', 'enable': 'Y'}
+                            {'name': 'CITIZEN', 'ip': '192.168.0.211', 'type': 'thermal', 'enable': 'Y'}
                         ]
                         self.devices = [
                             {'deviceType': 'Device', 'ip': '192.168.0.90', 'location': 'Room101', 
@@ -679,6 +691,11 @@ class EzeeCanteenWindow(QMainWindow):
         self.printer_status_timer = QTimer(self)
         self.printer_status_timer.timeout.connect(self.check_printer_status_and_update_ui)
         self.printer_status_timer.start(1000)
+        
+        # Add a timer to refresh all statuses every 2 seconds
+        self.refresh_status_timer = QTimer(self)
+        self.refresh_status_timer.timeout.connect(self.refresh_all_statuses)
+        self.refresh_status_timer.start(2000)  # 2000 ms = 2 seconds
     
     async def initialize_toggle_state(self):
         try:
@@ -1048,11 +1065,178 @@ class EzeeCanteenWindow(QMainWindow):
     
     def edit_printer(self, index):
         print(f"Edit printer at index {index}")
-        # Implement navigation or dialog for editing printer
+        try:
+            # Get the printer data to edit
+            if index >= 0 and index < len(self.printers):
+                printer_data = self.printers[index]
+                
+                # Import the PrinterSetupWindow from AddPrinter
+                from AddPrinter import PrinterSetupWindow
+                
+                # Create the PrinterSetupWindow instance in edit mode
+                self.printer_form = PrinterSetupWindow(edit_printer=printer_data)
+                
+                # Connect back button signal to return to settings
+                self.printer_form.back_button.clicked.connect(self.return_from_printer_form)
+                
+                # Connect printer saved signal to handle saving
+                self.printer_form.printer_saved.connect(self.on_printer_edit_saved)
+                
+                # Save current window geometry
+                self.saved_geometry = self.geometry()
+                
+                # Store old central widget
+                self.old_central_widget = self.centralWidget()
+                
+                # Set the printer form as the central widget
+                self.setCentralWidget(self.printer_form)
+            else:
+                print(f"Invalid printer index: {index}")
+                
+        except Exception as e:
+            print(f"Error opening printer edit form: {e}")
+            import traceback
+            traceback.print_exc()
     
     def edit_device(self, index):
         print(f"Edit device at index {index}")
-        # Implement navigation or dialog for editing device
+        try:
+            # Get the device data to edit
+            if index >= 0 and index < len(self.devices):
+                device_data = self.devices[index]
+                
+                # Import the EzeeCanteenDeviceForm from AddDevice
+                from AddDevice import EzeeCanteenDeviceForm
+                
+                # Create the device form with the device data
+                device_type = device_data.get('deviceType', 'Device')
+                self.device_form = EzeeCanteenDeviceForm(device_type=device_type, edit_device=device_data)
+                
+                # Pass existing printers to the form
+                self.device_form.populate_printers(self.printers)
+                
+                # Connect back button signal to return to settings
+                self.device_form.back_button.clicked.disconnect()
+                self.device_form.back_button.clicked.connect(self.return_from_device_form)
+                
+                # Connect device saved signal
+                self.device_form.device_saved.connect(self.on_device_saved)
+                
+                # Save current window geometry
+                self.saved_geometry = self.geometry()
+                
+                # Store old central widget
+                self.old_central_widget = self.centralWidget()
+                
+                # Set the device form as the central widget
+                self.setCentralWidget(self.device_form)
+            else:
+                print(f"Invalid device index: {index}")
+                
+        except Exception as e:
+            print(f"Error opening device edit form: {e}")
+            import traceback
+            traceback.print_exc()
+            
+    def on_printer_edit_saved(self, updated_printer):
+        """Handle when a printer edit is saved"""
+        # Find the printer in the local list
+        printer_index = -1
+        for i, printer in enumerate(self.printers):
+            if printer.get('deviceNumber') == updated_printer.get('deviceNumber') or \
+               (printer.get('name') == updated_printer.get('name') and 
+                printer.get('ip') == updated_printer.get('ip')):
+                self.printers[i] = updated_printer
+                printer_index = i
+                break
+        else:
+            # If no matching printer found, add as new
+            self.printers.append(updated_printer)
+            printer_index = len(self.printers) - 1
+        
+        # Check the online status of the printer and update UI
+        if printer_index >= 0:
+            # Show a message with the status
+            QTimer.singleShot(500, lambda: self.check_and_show_status("printer", printer_index))
+        
+        # Return to the settings screen
+        self.return_from_printer_form()
+        
+    def on_device_saved(self, device_data):
+        """Handle when a device is saved (added or edited)"""
+        device_index = -1
+        device_updated = False
+        
+        # Check if this is an existing device being updated
+        if hasattr(self.device_form, 'edit_mode') and self.device_form.edit_mode:
+            # Try to update existing device in the list
+            for i, device in enumerate(self.devices):
+                if (device.get('deviceNumber') == device_data.get('deviceNumber') or
+                    (device.get('ip') == self.device_form.edit_device.get('ip') and
+                     device.get('deviceType') == self.device_form.edit_device.get('deviceType'))):
+                    # Replace with updated data
+                    self.devices[i] = device_data
+                    device_index = i
+                    device_updated = True
+                    break
+        
+        # If not updated (either new or not found), add as new
+        if not device_updated:
+            self.devices.append(device_data)
+            device_index = len(self.devices) - 1
+        
+        # Save the settings using the event loop
+        loop = asyncio.get_event_loop()
+        loop.create_task(self.save_settings_mock({'printers': self.printers, 'devices': self.devices}))
+        
+        # Check the online status of the device and update UI
+        if device_index >= 0:
+            QTimer.singleShot(500, lambda: self.check_and_show_status("device", device_index))
+        
+        # Return to the settings screen
+        self.return_from_device_form()
+    
+    def check_and_show_status(self, device_type, index):
+        """Check device status and show message with result"""
+        if device_type == "printer":
+            if index < 0 or index >= len(self.printers):
+                return
+                
+            printer = self.printers[index]
+            ip = printer.get('ip', '')
+            name = printer.get('name', f"Printer {index+1}")
+            
+            is_online = self.update_printer_status(index)
+            
+            # Show status message
+            if is_online:
+                QMessageBox.information(self, "Status Check", 
+                                       f"Printer {name} at {ip} is ONLINE",
+                                       QMessageBox.Ok)
+            else:
+                QMessageBox.warning(self, "Status Check", 
+                                  f"Printer {name} at {ip} is OFFLINE.\nPlease check the connection.",
+                                  QMessageBox.Ok)
+                
+        elif device_type == "device":
+            if index < 0 or index >= len(self.devices):
+                return
+                
+            device = self.devices[index]
+            ip = device.get('ip', '')
+            location = device.get('location', f"Device {index+1}")
+            
+            is_online = self.update_device_status(index)
+            
+            # Show status message
+            if is_online:
+                QMessageBox.information(self, "Status Check", 
+                                       f"Device at {ip} ({location}) is ONLINE",
+                                       QMessageBox.Ok)
+            else:
+                QMessageBox.warning(self, "Status Check", 
+                                  f"Device at {ip} ({location}) is OFFLINE.\nPlease check the connection.",
+                                  QMessageBox.Ok)
     
     def add_printer(self):
         try:
@@ -1062,15 +1246,11 @@ class EzeeCanteenWindow(QMainWindow):
             # Create the PrinterSetupWindow instance
             self.printer_form = PrinterSetupWindow()
             
-            # Find the buttons in the UI using their object names
-            back_button = self.printer_form.findChild(QPushButton, "backButton")
-            save_button = self.printer_form.findChild(QPushButton, "saveButton")
-            
             # Connect back button signal to return to settings
-            back_button.clicked.connect(self.return_from_printer_form)
+            self.printer_form.back_button.clicked.connect(self.return_from_printer_form)
             
-            # Connect save button signal to handle saving
-            save_button.clicked.connect(self.on_printer_form_save)
+            # Connect printer_saved signal to handle saving
+            self.printer_form.printer_saved.connect(self.on_printer_added)
             
             # Save current window geometry
             self.saved_geometry = self.geometry()
@@ -1086,7 +1266,28 @@ class EzeeCanteenWindow(QMainWindow):
             import traceback
             traceback.print_exc()
             
+    def on_printer_added(self, printer_data):
+        """Handle when a new printer is added"""
+        # Add the new printer to the printers list
+        self.printers.append(printer_data)
+        printer_index = len(self.printers) - 1
+        
+        # Save settings using the event loop
+        import asyncio
+        loop = asyncio.get_event_loop()
+        loop.create_task(self.save_settings_mock({'printers': self.printers, 'devices': self.devices}))
+        
+        # Check the online status of the new printer and update UI
+        QTimer.singleShot(500, lambda: self.check_and_show_status("printer", printer_index))
+        
+        # Return to the settings screen
+        self.return_from_printer_form()
+    
     def return_from_printer_form(self):
+        # Stop any active timers first
+        if hasattr(self, 'refresh_status_timer') and self.refresh_status_timer:
+            self.refresh_status_timer.stop()
+        
         # Remove the printer form
         if hasattr(self, 'printer_form'):
             self.printer_form.setParent(None)
@@ -1109,93 +1310,9 @@ class EzeeCanteenWindow(QMainWindow):
         # Explicitly repopulate the printers and devices with existing data
         self.populate_printers()
         self.populate_devices()
-    
-    def on_printer_form_save(self):
-        try:
-            # Validate the form first
-            if not self.printer_form.validate_form():
-                return
-                
-            # Get printer data from the form
-            printer_data = {
-                'name': self.printer_form.printer_name.text().strip(),
-                'ip': self.printer_form.printer_ip.text().strip(),
-                'type': self.printer_form.printer_type.currentText().lower(),
-                'port': self.printer_form.printer_port.text().strip(),
-                'enable': 'Y',  # Default to enabled
-                'deviceNumber': len(self.printers) + 1,
-                'fontSize': self.printer_form.font_size.currentData()
-            }
-            
-            # Add the new printer to the printers list
-            self.printers.append(printer_data)
-            
-            # Save settings using the event loop
-            import asyncio
-            loop = asyncio.get_event_loop()
-            loop.create_task(self.save_settings_mock({'printers': self.printers, 'devices': self.devices}))
-            
-            # Try to update the database if possible
-            self.update_printer_in_database(printer_data)
-            
-            # Show success message
-            QMessageBox.information(self, "Success", "Printer added successfully")
-            
-            # Return to the settings screen
-            self.return_from_printer_form()
-            
-            # Update the UI - this is now handled in return_from_printer_form
-        except Exception as e:
-            print(f"Error saving printer: {e}")
-            import traceback
-            traceback.print_exc()
-    
-    def update_printer_in_database(self, printer_data):
-        try:
-            # Connect to the database
-            conn = self.db_connect()
-            if conn:
-                cursor = conn.cursor()
-                
-                # Check if the printer already exists by IP
-                cursor.execute("SELECT COUNT(*) FROM configh WHERE IP = %s AND DeviceType = 'Printer'", 
-                              (printer_data['ip'],))
-                count = cursor.fetchone()[0]
-                
-                if count > 0:
-                    # Update existing printer
-                    cursor.execute("""
-                        UPDATE configh 
-                        SET DeviceType = 'Printer',
-                            DeviceNumber = %s,
-                            DeviceLocation = %s,
-                            Enable = %s
-                        WHERE IP = %s AND DeviceType = 'Printer'
-                    """, (printer_data.get('deviceNumber', 1), 
-                          printer_data.get('location', ''), 
-                          printer_data.get('enable', 'Y'),
-                          printer_data['ip']))
-                else:
-                    # Insert new printer
-                    cursor.execute("""
-                        INSERT INTO configh 
-                        (DeviceType, DeviceNumber, IP, Port, DeviceLocation, Enable, DeviceName) 
-                        VALUES ('Printer', %s, %s, %s, %s, %s, %s)
-                    """, (printer_data.get('deviceNumber', 1), 
-                          printer_data['ip'],
-                          printer_data.get('port', '9100'),
-                          printer_data.get('location', ''),
-                          printer_data.get('enable', 'Y'),
-                          printer_data.get('name', 'CITIZEN')))
-                
-                conn.commit()
-                conn.close()
-                print(f"Printer saved to database: {printer_data['name']}")
-                return True
-            return False
-        except Exception as e:
-            print(f"Error updating printer in database: {e}")
-            return False
+        
+        # Update the status of all printers and devices (with a delay to ensure UI is ready)
+        QTimer.singleShot(500, self.refresh_all_statuses)
     
     def add_device(self):
         try:
@@ -1228,6 +1345,10 @@ class EzeeCanteenWindow(QMainWindow):
             print(f"Error opening device form: {e}")
     
     def return_from_device_form(self):
+        # Stop any active timers first
+        if hasattr(self, 'refresh_status_timer') and self.refresh_status_timer:
+            self.refresh_status_timer.stop()
+        
         # Remove the device form
         if hasattr(self, 'device_form'):
             self.device_form.setParent(None)
@@ -1250,19 +1371,170 @@ class EzeeCanteenWindow(QMainWindow):
         # Explicitly repopulate the printers and devices with existing data
         self.populate_printers()
         self.populate_devices()
+        
+        # Update the status of all printers and devices (with a delay to ensure UI is ready)
+        QTimer.singleShot(500, self.refresh_all_statuses)
     
-    def on_device_saved(self, device_data):
-        # Add the new device to the devices list
-        self.devices.append(device_data)
-        
-        # Save the settings using the event loop (for backward compatibility with JSON)
-        loop = asyncio.get_event_loop()
-        loop.create_task(self.save_settings_mock({'printers': self.printers, 'devices': self.devices}))
-        
-        # Return to the settings screen
-        self.return_from_device_form()
+    def refresh_all_statuses(self):
+        """Refresh the status of all printers and devices using parallel processing"""
+        try:
+            # Check if widgets still exist
+            if not hasattr(self, 'printers_list') or self.printers_list is None or sip.isdeleted(self.printers_list):
+                # Stop the timer if the widgets are gone
+                if hasattr(self, 'refresh_status_timer'):
+                    self.refresh_status_timer.stop()
+                return
+                
+            if not hasattr(self, 'devices_list') or self.devices_list is None or sip.isdeleted(self.devices_list):
+                # Stop the timer if the widgets are gone
+                if hasattr(self, 'refresh_status_timer'):
+                    self.refresh_status_timer.stop()
+                return
+                
+            # Collect devices to check
+            devices_to_check = []
+            
+            # Add printers
+            for i, printer in enumerate(self.printers):
+                ip = printer.get('ip')
+                if ip:
+                    port = printer.get('port', '9100')
+                    devices_to_check.append((i, ip, port, True))  # True = is_printer
+            
+            # Add devices
+            for i, device in enumerate(self.devices):
+                ip = device.get('ip')
+                if ip:
+                    port = device.get('port', '80')
+                    devices_to_check.append((i, ip, port, False))  # False = not a printer
+            
+            # Run parallel checks (max 10 workers)
+            check_results = self.check_online_status_parallel(devices_to_check, max_workers=10)
+            
+            # Process results
+            online_printers = 0
+            online_devices = 0
+            
+            for index, is_online, is_printer in check_results:
+                if is_printer:
+                    # Update printer status
+                    self.printers[index]['enable'] = 'Y' if is_online else 'N'
+                    
+                    # Update printer UI
+                    printer_widget = self.printers_list.findChild(QFrame, f"printer-{index}")
+                    if printer_widget and not sip.isdeleted(printer_widget):
+                        if is_online:
+                            printer_widget.setStyleSheet("background-color: #15803d; border-radius: 4px; padding: 2px 4px; margin-bottom: 2px;")
+                            online_printers += 1
+                        else:
+                            printer_widget.setStyleSheet("background-color: #b91c1c; border-radius: 4px; padding: 2px 4px; margin-bottom: 2px;")
+                        
+                        # Update edit button style
+                        edit_button = printer_widget.findChild(QPushButton, f"editPButton-{index}")
+                        if edit_button and not sip.isdeleted(edit_button):
+                            if is_online:
+                                edit_button.setStyleSheet("""
+                                    QPushButton {
+                                        background-color: #ca8a04;
+                                        color: white;
+                                        padding: 1px 4px;
+                                        border-radius: 3px;
+                                        font-weight: bold;
+                                        font-size: 11px;
+                                    }
+                                    QPushButton:hover {
+                                        background-color: #a16207;
+                                    }
+                                """)
+                            else:
+                                edit_button.setStyleSheet("""
+                                    QPushButton {
+                                        background-color: #4b5563;
+                                        color: white;
+                                        padding: 1px 4px;
+                                        border-radius: 3px;
+                                        font-weight: bold;
+                                        font-size: 11px;
+                                    }
+                                    QPushButton:hover {
+                                        background-color: #6b7280;
+                                    }
+                                """)
+                else:
+                    # Update device status
+                    self.devices[index]['enable'] = 'Y' if is_online else 'N'
+                    
+                    # Update device UI
+                    device_widget = self.devices_list.findChild(QFrame, f"device-{index}")
+                    if device_widget and not sip.isdeleted(device_widget):
+                        if is_online:
+                            device_widget.setStyleSheet("background-color: #15803d; border-radius: 6px; padding: 2px 4px; margin-bottom: 2px;")
+                            online_devices += 1
+                        else:
+                            device_widget.setStyleSheet("background-color: #b91c1c; border-radius: 6px; padding: 2px 4px; margin-bottom: 2px;")
+                        
+                        # Update edit button style
+                        edit_button = device_widget.findChild(QPushButton, f"editDButton-{index}")
+                        if edit_button and not sip.isdeleted(edit_button):
+                            if is_online:
+                                edit_button.setStyleSheet("""
+                                    QPushButton {
+                                        background-color: #ca8a04;
+                                        color: white;
+                                        padding: 1px 4px;
+                                        border-radius: 3px;
+                                        font-weight: bold;
+                                        font-size: 11px;
+                                    }
+                                    QPushButton:hover {
+                                        background-color: #a16207;
+                                    }
+                                """)
+                            else:
+                                edit_button.setStyleSheet("""
+                                    QPushButton {
+                                        background-color: #4b5563;
+                                        color: white;
+                                        padding: 1px 4px;
+                                        border-radius: 3px;
+                                        font-weight: bold;
+                                        font-size: 11px;
+                                    }
+                                    QPushButton:hover {
+                                        background-color: #6b7280;
+                                    }
+                                """)
+            
+            # Print periodic status update (but not every time to avoid console spam)
+            if hasattr(self, 'status_update_counter'):
+                self.status_update_counter += 1
+            else:
+                self.status_update_counter = 0
+                
+            # Only log every 10 updates (20 seconds)
+            if self.status_update_counter % 10 == 0:
+                printer_count = len([p for p in self.printers if p.get('ip')])
+                device_count = len([d for d in self.devices if d.get('ip')])
+                print(f"Status update: {online_printers}/{printer_count} printers and {online_devices}/{device_count} devices online")
+            
+            # Force UI update
+            QApplication.processEvents()
+        except Exception as e:
+            print(f"Error in refresh_all_statuses: {e}")
+            import traceback
+            traceback.print_exc()
     
     def display_settings(self):
+        # Stop all timers before navigating away
+        if hasattr(self, 'device_status_timer') and self.device_status_timer:
+            self.device_status_timer.stop()
+            
+        if hasattr(self, 'printer_status_timer') and self.printer_status_timer:
+            self.printer_status_timer.stop()
+            
+        if hasattr(self, 'refresh_status_timer') and self.refresh_status_timer:
+            self.refresh_status_timer.stop()
+            
         # Save current window geometry
         self.saved_geometry = self.geometry()
         
@@ -1315,9 +1587,22 @@ class EzeeCanteenWindow(QMainWindow):
         # Explicitly repopulate the printers and devices with existing data
         self.populate_printers()    
         self.populate_devices()
+        
+        # Update device status after a short delay to ensure UI is ready
+        QTimer.singleShot(500, self.refresh_all_statuses)
     
     def meal_settings(self):
         print("Navigating to canteen settings")
+        
+        # Stop all timers before navigating away
+        if hasattr(self, 'device_status_timer') and self.device_status_timer:
+            self.device_status_timer.stop()
+            
+        if hasattr(self, 'printer_status_timer') and self.printer_status_timer:
+            self.printer_status_timer.stop()
+            
+        if hasattr(self, 'refresh_status_timer') and self.refresh_status_timer:
+            self.refresh_status_timer.stop()
         
         # Save current window geometry
         self.saved_geometry = self.geometry()
@@ -1376,6 +1661,9 @@ class EzeeCanteenWindow(QMainWindow):
         # Explicitly repopulate the printers and devices with existing data
         self.populate_printers()    
         self.populate_devices()
+        
+        # Update device status after a short delay to ensure UI is ready
+        QTimer.singleShot(500, self.refresh_all_statuses)
     
     async def clear_cache(self):
         self.loading_overlay = LoadingOverlay(self)
@@ -1596,6 +1884,290 @@ class EzeeCanteenWindow(QMainWindow):
                                   "No devices were found in the database. Check the database connection and table contents.")
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to fetch devices: {str(e)}")
+            import traceback
+            traceback.print_exc()
+
+    def check_online_status(self, ip_address, port=80, timeout=0.5):
+        """Check if a device or printer is online by attempting a socket connection"""
+        try:
+            import socket
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(timeout)
+            result = sock.connect_ex((ip_address, int(port)))
+            sock.close()
+            # If result is 0, the connection was successful
+            return result == 0
+        except Exception as e:
+            print(f"Error checking online status for {ip_address}: {e}")
+            return False
+            
+    def check_online_status_parallel(self, devices_to_check, max_workers=5):
+        """
+        Check multiple devices in parallel using threads
+        
+        devices_to_check: list of tuples (index, ip, port, is_printer)
+        Returns: list of tuples (index, is_online, is_printer)
+        """
+        results = []
+        
+        # Define a worker function for each check
+        def check_device(device_info):
+            index, ip, port, is_printer = device_info
+            try:
+                is_online = self.check_online_status(ip, port)
+                return (index, is_online, is_printer)
+            except Exception as e:
+                print(f"Error in parallel check for {ip}: {e}")
+                return (index, False, is_printer)
+        
+        # Use thread pool to execute checks in parallel
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # Submit all tasks
+            futures = [executor.submit(check_device, device) for device in devices_to_check]
+            
+            # Collect results as they complete
+            for future in as_completed(futures):
+                try:
+                    result = future.result()
+                    results.append(result)
+                except Exception as e:
+                    print(f"Error processing future result: {e}")
+        
+        return results
+
+    def update_printer_status(self, printer_index):
+        """Update the status and UI color of a specific printer"""
+        if printer_index < 0 or printer_index >= len(self.printers):
+            return
+            
+        printer = self.printers[printer_index]
+        ip_address = printer.get('ip', '')
+        port = printer.get('port', 9100)
+        
+        if not ip_address:
+            return
+            
+        # Check if the printer is online
+        is_online = self.check_online_status(ip_address, port)
+        
+        # Update the enable status based on online check
+        printer['enable'] = 'Y' if is_online else 'N'
+        
+        # Find and update the printer widget
+        printer_widget = self.printers_list.findChild(QFrame, f"printer-{printer_index}")
+        if printer_widget and not sip.isdeleted(printer_widget):
+            if is_online:
+                printer_widget.setStyleSheet("background-color: #15803d; border-radius: 4px; padding: 2px 4px; margin-bottom: 2px;")
+            else:
+                printer_widget.setStyleSheet("background-color: #b91c1c; border-radius: 4px; padding: 2px 4px; margin-bottom: 2px;")
+            
+            # Update the edit button style
+            edit_button = printer_widget.findChild(QPushButton, f"editPButton-{printer_index}")
+            if edit_button and not sip.isdeleted(edit_button):
+                if is_online:
+                    edit_button.setStyleSheet("""
+                        QPushButton {
+                            background-color: #ca8a04;
+                            color: white;
+                            padding: 1px 4px;
+                            border-radius: 3px;
+                            font-weight: bold;
+                            font-size: 11px;
+                        }
+                        QPushButton:hover {
+                            background-color: #a16207;
+                        }
+                    """)
+                else:
+                    edit_button.setStyleSheet("""
+                        QPushButton {
+                            background-color: #4b5563;
+                            color: white;
+                            padding: 1px 4px;
+                            border-radius: 3px;
+                            font-weight: bold;
+                            font-size: 11px;
+                        }
+                        QPushButton:hover {
+                            background-color: #6b7280;
+                        }
+                    """)
+        
+        return is_online
+        
+    def update_device_status(self, device_index):
+        """Update the status and UI color of a specific device"""
+        if device_index < 0 or device_index >= len(self.devices):
+            return
+            
+        device = self.devices[device_index]
+        ip_address = device.get('ip', '')
+        port = device.get('port', 80)
+        
+        if not ip_address:
+            return
+            
+        # Check if the device is online
+        is_online = self.check_online_status(ip_address, port)
+        
+        # Update the enable status based on online check
+        device['enable'] = 'Y' if is_online else 'N'
+        
+        # Find and update the device widget
+        device_widget = self.devices_list.findChild(QFrame, f"device-{device_index}")
+        if device_widget and not sip.isdeleted(device_widget):
+            if is_online:
+                device_widget.setStyleSheet("background-color: #15803d; border-radius: 6px; padding: 2px 4px; margin-bottom: 2px;")
+            else:
+                device_widget.setStyleSheet("background-color: #b91c1c; border-radius: 6px; padding: 2px 4px; margin-bottom: 2px;")
+            
+            # Update the edit button style
+            edit_button = device_widget.findChild(QPushButton, f"editDButton-{device_index}")
+            if edit_button and not sip.isdeleted(edit_button):
+                if is_online:
+                    edit_button.setStyleSheet("""
+                        QPushButton {
+                            background-color: #ca8a04;
+                            color: white;
+                            padding: 1px 4px;
+                            border-radius: 3px;
+                            font-weight: bold;
+                            font-size: 11px;
+                        }
+                        QPushButton:hover {
+                            background-color: #a16207;
+                        }
+                    """)
+                else:
+                    edit_button.setStyleSheet("""
+                        QPushButton {
+                            background-color: #4b5563;
+                            color: white;
+                            padding: 1px 4px;
+                            border-radius: 3px;
+                            font-weight: bold;
+                            font-size: 11px;
+                        }
+                        QPushButton:hover {
+                            background-color: #6b7280;
+                        }
+                    """)
+        
+        return is_online
+
+    def closeEvent(self, event):
+        """Handle window close event by stopping all timers"""
+        # Stop all timers to prevent accessing deleted widgets
+        if hasattr(self, 'device_status_timer') and self.device_status_timer:
+            self.device_status_timer.stop()
+            
+        if hasattr(self, 'printer_status_timer') and self.printer_status_timer:
+            self.printer_status_timer.stop()
+            
+        if hasattr(self, 'refresh_status_timer') and self.refresh_status_timer:
+            self.refresh_status_timer.stop()
+            
+        if hasattr(self, 'auto_mail_timer') and self.auto_mail_timer:
+            self.auto_mail_timer.stop()
+            
+        # Accept the close event
+        event.accept()
+
+    def check_and_send_auto_email(self):
+        """Check if an email needs to be sent based on auto mail settings"""
+        try:
+            print("\n===== CHECKING AUTO EMAIL =====")
+            # Load settings from appSettings.json
+            if not os.path.exists('appSettings.json'):
+                print("appSettings.json not found, skipping email check")
+                return
+            
+            with open('appSettings.json', 'r') as file:
+                settings = json.load(file)
+            
+            mail_settings = settings.get('MailSettings', {})
+            
+            # Check if auto mail is enabled
+            auto_mail_enabled = mail_settings.get('AutoMail', False)
+            if not auto_mail_enabled:
+                print("Auto mail is disabled, skipping email check")
+                return
+            
+            # Get the scheduled time
+            auto_mail_time = mail_settings.get('AutoMailTime', '09:00')
+            scheduled_time = datetime.datetime.strptime(auto_mail_time, '%H:%M').time()
+            
+            # Get the current time
+            current_time = datetime.datetime.now()
+            
+            # Get the last email sent time
+            last_email_sent_str = mail_settings.get('lastEmailSent', '')
+            
+            try:
+                if last_email_sent_str:
+                    last_email_sent = datetime.datetime.strptime(last_email_sent_str, '%Y-%m-%d %H:%M:%S')
+                else:
+                    # If no last email sent, set it to a past date
+                    last_email_sent = current_time - timedelta(days=2)
+            except Exception as e:
+                print(f"Error parsing last email sent date: {e}")
+                last_email_sent = current_time - timedelta(days=2)
+            
+            # Check if today's email has already been sent
+            today_date = current_time.date()
+            last_sent_date = last_email_sent.date()
+            
+            if last_sent_date >= today_date:
+                print(f"Email already sent today ({last_email_sent_str}), skipping")
+                return
+            
+            # Check if current time is past the scheduled time for today
+            current_time_today = current_time.time()
+            
+            if current_time_today < scheduled_time:
+                print(f"Not yet time to send email. Current: {current_time_today}, Scheduled: {scheduled_time}")
+                return
+            
+            # If we reach here, it means:
+            # 1. Auto mail is enabled
+            # 2. Today's email hasn't been sent yet
+            # 3. Current time is past the scheduled time
+            # So we should send the email, even if application wasn't running at the exact scheduled time
+            
+            if current_time_today > scheduled_time:
+                time_diff = datetime.datetime.combine(datetime.date.today(), current_time_today) - \
+                           datetime.datetime.combine(datetime.date.today(), scheduled_time)
+                minutes_diff = time_diff.seconds // 60
+                
+                if minutes_diff > 0:
+                    print(f"⚠️ Scheduled email time ({scheduled_time}) has passed by {minutes_diff} minutes. Sending now.")
+            
+            # Time to send the email
+            print(f"Preparing to send auto email (Scheduled: {scheduled_time}, Last sent: {last_email_sent_str})")
+            
+            # Get yesterday's date for the report
+            yesterday = (current_time - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
+            
+            # Send the email with yesterday's report
+            result = send_daily_report_email(yesterday)
+            
+            if result:
+                # Email sent successfully, update the lastEmailSent field
+                mail_settings['lastEmailSent'] = current_time.strftime('%Y-%m-%d %H:%M:%S')
+                settings['MailSettings'] = mail_settings
+                
+                # Save the updated settings back to the file
+                with open('appSettings.json', 'w') as file:
+                    json.dump(settings, file, indent=4)
+                
+                print(f"✅ Auto email sent successfully with yesterday's report ({yesterday})")
+                print(f"✅ Updated lastEmailSent to {mail_settings['lastEmailSent']}")
+            else:
+                print("❌ Failed to send auto email")
+            
+            print("===== AUTO EMAIL CHECK COMPLETE =====\n")
+        except Exception as e:
+            print(f"Error in auto email check: {e}")
             import traceback
             traceback.print_exc()
 
