@@ -273,8 +273,8 @@ def getDeviceDetails(ip, port, user, psw):
     try:
         # Log authentication attempt (sanitize password)
         masked_password = psw[:2] + "*" * (len(psw) - 4) + psw[-2:] if len(psw) > 4 else "****"
-        logging.info(f"Getting device details for {ip}:{port} with user: {user}, password length: {len(psw)} {psw}")
-        print(f"Getting device details for {ip}:{port} with user: {user}, password length: {len(psw)} {psw}")
+        logging.info(f"Getting device details for {ip}:{port} with user: {user}")
+        print(f"Getting device details for {ip}:{port} with user: {user}")
        
         response = requests.get(url, auth=HTTPDigestAuth(
             user, psw), headers=headers, data=payload, timeout=5)
@@ -1803,7 +1803,7 @@ class EzeeCanteen(QMainWindow):
                     
                     if result == 0:
                         # Printer is available, print the token
-                        print_slip(
+                        print_slip(  
                             printer_ip, 
                             printer_port, 
                             0, 
