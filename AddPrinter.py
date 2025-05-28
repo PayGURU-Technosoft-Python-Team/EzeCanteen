@@ -2,11 +2,14 @@ import sys
 import json
 import os
 import mysql.connector
+import socket
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
                             QLabel, QLineEdit, QComboBox, QRadioButton, QTextEdit,
-                            QPushButton, QMessageBox, QFrame, QButtonGroup)
-from PyQt5.QtCore import Qt, QSettings, pyqtSignal
+                            QPushButton, QMessageBox, QFrame, QButtonGroup, QDialog,
+                            QListWidget, QListWidgetItem, QGroupBox)
+from PyQt5.QtCore import Qt, QSettings, pyqtSignal, QThread
 from PyQt5.QtGui import QFont
 
 # Database configuration
@@ -15,6 +18,420 @@ DB_USER = "pgcanteen"
 DB_PORT = 33975
 DB_PASS = "L^{Z,8~zzfF9(nd8"
 DB_NAME = "payguru_canteen"
+
+class PrinterScannerThread(QThread):
+    """Thread for scanning network for printers"""
+    printer_found = pyqtSignal(dict)
+    scan_progress = pyqtSignal(str)
+    scan_complete = pyqtSignal(list)
+    
+    def __init__(self, subnet=None):
+        super().__init__()
+        self.subnet = subnet
+        self.found_printers = []
+        
+    def get_subnet(self):
+        """Get current subnet automatically"""
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(("8.8.8.8", 80))
+            ip = s.getsockname()[0]
+            s.close()
+            return '.'.join(ip.split('.')[:-1])
+        except:
+            return "192.168.1"  # Default fallback subnet
+    
+    def check_printer(self, ip):
+        """Check if IP is a printer by trying printer-specific ports"""
+        try:
+            # Check printer-specific ports
+            printer_ports = [9100, 515, 631]  # Raw, LPD, IPP
+            for port in printer_ports:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(1)
+                if sock.connect_ex((ip, port)) == 0:
+                    sock.close()
+                    # Create a more descriptive printer name based on port type
+                    port_types = {9100: "RAW", 515: "LPD", 631: "IPP"}
+                    port_type = port_types.get(port, "Unknown")
+                    printer_info = {
+                        'ip': ip,
+                        'port': str(port),
+                        'name': f"Thermal Printer ({ip} - {port_type})",
+                        'model': "Thermal"  # Default type
+                    }
+                    self.printer_found.emit(printer_info)
+                    return printer_info
+                sock.close()
+        except Exception as e:
+            pass
+        return None
+    
+    def run(self):
+        """Run the network scan"""
+        if not self.subnet:
+            self.subnet = self.get_subnet()
+        
+        self.scan_progress.emit(f"Scanning network: {self.subnet}.0/24")
+        
+        # Generate IPs to scan
+        ips = [f"{self.subnet}.{i}" for i in range(1, 255)]
+        
+        # Parallel scan with thread pool
+        with ThreadPoolExecutor(max_workers=20) as executor:
+            futures = [executor.submit(self.check_printer, ip) for ip in ips]
+            
+            for i, future in enumerate(as_completed(futures)):
+                result = future.result()
+                if result:
+                    self.found_printers.append(result)
+                
+                # Update progress
+                progress = f"Scanned {i+1}/254 addresses... Found {len(self.found_printers)} printers"
+                self.scan_progress.emit(progress)
+        
+        self.scan_complete.emit(self.found_printers)
+
+
+class PrinterSelectionDialog(QDialog):
+    """Dialog for selecting detected printers"""
+    printers_selected = pyqtSignal(list)
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.detected_printers = []
+        self.initUI()
+        
+    def initUI(self):
+        self.setWindowTitle('Auto-Detect Printers')
+        self.setGeometry(200, 200, 850, 650)
+        self.setMinimumSize(800, 600)
+        self.setStyleSheet("background-color: #1e293b; color: white;")
+           
+        layout = QVBoxLayout(self)
+        layout.setSpacing(15)
+        layout.setContentsMargins(25, 25, 25, 25)
+        
+        # Title
+        title_label = QLabel("Network Printer Detection")
+        title_label.setFont(QFont("Arial", 16, QFont.Bold))
+        title_label.setStyleSheet("""
+            margin-bottom: 12px; 
+            padding: 12px; 
+            border-bottom: 2px solid #4b5563;
+            color: #f8fafc;
+        """)
+        layout.addWidget(title_label)
+
+        # Subnet input section
+        subnet_group = QGroupBox("Network Settings")
+        subnet_group.setStyleSheet("""
+            QGroupBox {
+                font-weight: 600;
+                font-size: 14px;
+                padding-top: 10px;
+                margin-top: 8px;
+                color: #e2e8f0;
+                border: 1px solid #374151;
+                border-radius: 8px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 8px;
+                background-color: #1e293b;
+            }
+        """)
+        subnet_layout = QVBoxLayout(subnet_group)
+        subnet_layout.setSpacing(8)
+        subnet_layout.setContentsMargins(15, 18, 15, 15)
+
+        # Helper function for consistent field styling
+        def create_subnet_field(label_text, widget, placeholder=""):
+            # Label
+            label = QLabel(label_text)
+            label.setStyleSheet("""
+                font-size: 13px; 
+                font-weight: 500;
+                color: #e2e8f0;
+                margin-bottom: 2px;
+                margin-top: 4px;
+            """)
+            subnet_layout.addWidget(label)
+            
+            # Widget styling
+            widget.setMinimumHeight(38)
+            if placeholder:
+                widget.setPlaceholderText(placeholder)
+            
+            widget.setStyleSheet("""
+                QLineEdit {
+                    background-color: #0f172a;
+                    border: 1px solid #374151;
+                    padding: 8px 12px;
+                    border-radius: 6px;
+                    margin-bottom: 6px;
+                    font-size: 13px;
+                    color: #f1f5f9;
+                }
+                QLineEdit:focus {
+                    border: 2px solid #3b82f6;
+                    background-color: #0f172a;
+                }
+                QLineEdit::placeholder {
+                    color: #94a3b8;
+                }
+            """)
+            subnet_layout.addWidget(widget)
+
+        # Subnet input
+        self.subnet_input = QLineEdit()
+        create_subnet_field("Subnet (optional - auto-detected if empty):", self.subnet_input, "192.168.1 (leave empty for auto-detection)")
+
+        # Add small spacing before button
+        subnet_layout.addSpacing(8)
+
+        # Scan button
+        self.scan_button = QPushButton("Start Network Scan")
+        self.scan_button.setMinimumHeight(42)
+        self.scan_button.setStyleSheet("""
+            QPushButton {
+                background-color: #3b82f6;
+                color: white;
+                padding: 10px 20px;
+                font-weight: 600;
+                font-size: 13px;
+                border-radius: 8px;
+                margin: 8px 0;
+                border: none;
+            }
+            QPushButton:hover {
+                background-color: #2563eb;
+            }
+            QPushButton:pressed {
+                background-color: #1d4ed8;
+            }
+            QPushButton:disabled {
+                background-color: #6b7280;
+                color: #9ca3af;
+            }
+        """)
+        self.scan_button.clicked.connect(self.start_scan)
+        subnet_layout.addWidget(self.scan_button)
+
+        layout.addWidget(subnet_group)
+        
+        # Progress section
+        self.progress_label = QLabel("Ready to scan...")
+        self.progress_label.setStyleSheet("color: #9ca3af; margin: 15px 0; font-size: 13px;")
+        layout.addWidget(self.progress_label)
+        
+        # Printer list section
+        printer_group = QGroupBox("Detected Printers")
+        printer_group.setStyleSheet("""
+            QGroupBox {
+                font-weight: bold;
+                font-size: 14px;
+                padding-top: 15px;
+                margin-top: 10px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 5px;
+            }
+        """)
+        printer_layout = QVBoxLayout(printer_group)
+        printer_layout.setContentsMargins(20, 25, 20, 20)
+        
+        self.printer_list = QListWidget()
+        self.printer_list.setStyleSheet("""
+            QListWidget {
+                background-color: #0f172a;
+                border: 1px solid #4b5563;
+                border-radius: 6px;
+                padding: 10px;
+                font-size: 13px;
+            }
+            QListWidget::item {
+                padding: 12px;
+                margin: 3px;
+                border-radius: 6px;
+            }
+            QListWidget::item:selected {
+                background-color: #3b82f6;
+            }
+            QListWidget::item:hover {
+                background-color: #1e40af;
+            }
+        """)
+        self.printer_list.setSelectionMode(QListWidget.MultiSelection)
+        printer_layout.addWidget(self.printer_list)
+        
+        layout.addWidget(printer_group)
+        
+        # Button layout
+        button_layout = QHBoxLayout()
+        button_layout.setSpacing(15)
+        button_layout.addStretch()
+        
+        self.select_all_button = QPushButton("Select All")
+        self.select_all_button.setMinimumHeight(40)
+        self.select_all_button.setStyleSheet("""
+            QPushButton {
+                background-color: #22c55e;
+                color: white;
+                padding: 10px 20px;
+                font-weight: bold;
+                font-size: 13px;
+                border-radius: 6px;
+            }
+            QPushButton:hover {
+                background-color: #16a34a;
+            }
+            QPushButton:disabled {
+                background-color: #6b7280;
+                color: #9ca3af;
+            }
+        """)
+        self.select_all_button.clicked.connect(self.select_all_printers)
+        self.select_all_button.setEnabled(False)
+        
+        self.add_selected_button = QPushButton("Add Selected Printers")
+        self.add_selected_button.setMinimumHeight(40)
+        self.add_selected_button.setStyleSheet("""
+            QPushButton {
+                background-color: #8b5cf6;
+                color: white;
+                padding: 10px 20px;
+                font-weight: bold;
+                font-size: 13px;
+                border-radius: 6px;
+            }
+            QPushButton:hover {
+                background-color: #7c3aed;
+            }
+            QPushButton:disabled {
+                background-color: #6b7280;
+                color: #9ca3af;
+            }
+        """)
+        self.add_selected_button.clicked.connect(self.add_selected_printers)
+        self.add_selected_button.setEnabled(False)
+        
+        self.close_button = QPushButton("Close")
+        self.close_button.setMinimumHeight(40)
+        self.close_button.setStyleSheet("""
+            QPushButton {
+                background-color: #6b7280;
+                color: white;
+                padding: 10px 20px;
+                font-weight: bold;
+                font-size: 13px;
+                border-radius: 6px;
+            }
+            QPushButton:hover {
+                background-color: #4b5563;
+            }
+        """)
+        self.close_button.clicked.connect(self.close)
+        
+        button_layout.addWidget(self.select_all_button)
+        button_layout.addWidget(self.add_selected_button)
+        button_layout.addWidget(self.close_button)
+        
+        layout.addLayout(button_layout)
+        
+        # Connect the printer list selection changed signal
+        self.printer_list.itemSelectionChanged.connect(self.update_button_states)
+        
+    def update_button_states(self):
+        """Update button states based on selection"""
+        has_selection = len(self.printer_list.selectedItems()) > 0
+        self.add_selected_button.setEnabled(has_selection)
+    
+    def start_scan(self):
+        """Start the network scanning process"""
+        subnet = self.subnet_input.text().strip() or None
+        
+        # Clear previous results
+        self.printer_list.clear()
+        self.detected_printers = []
+        
+        # Disable scan button and enable progress updates
+        self.scan_button.setEnabled(False)
+        self.scan_button.setText("Scanning...")
+        self.select_all_button.setEnabled(False)
+        self.add_selected_button.setEnabled(False)
+        
+        # Start scanning thread
+        self.scanner_thread = PrinterScannerThread(subnet)
+        self.scanner_thread.printer_found.connect(self.on_printer_found)
+        self.scanner_thread.scan_progress.connect(self.on_scan_progress)
+        self.scanner_thread.scan_complete.connect(self.on_scan_complete)
+        self.scanner_thread.start()
+    
+    def on_printer_found(self, printer_info):
+        """Handle when a printer is found"""
+        self.detected_printers.append(printer_info)
+        
+        # Add to list widget
+        item_text = f"🖨️ {printer_info['ip']} - Port {printer_info['port']}"
+        item = QListWidgetItem(item_text)
+        item.setData(Qt.UserRole, printer_info)
+        self.printer_list.addItem(item)
+        
+        # Update button states in case this is the first item
+        self.update_button_states()
+    
+    def on_scan_progress(self, progress_text):
+        """Update progress label"""
+        self.progress_label.setText(progress_text)
+    
+    def on_scan_complete(self, found_printers):
+        """Handle scan completion"""
+        self.scan_button.setEnabled(True)
+        self.scan_button.setText("Start Network Scan")
+        
+        if found_printers:
+            self.select_all_button.setEnabled(True)
+            # Note: add_selected_button is enabled only when items are selected
+            self.progress_label.setText(f"Scan complete! Found {len(found_printers)} printers. Please select printers to add.")
+            
+            # If only one printer was found, auto-select it
+            if len(found_printers) == 1:
+                self.printer_list.item(0).setSelected(True)
+        else:
+            self.progress_label.setText("Scan complete. No printers found.")
+            self.select_all_button.setEnabled(False)
+    
+    def select_all_printers(self):
+        """Select all printers in the list"""
+        for i in range(self.printer_list.count()):
+            self.printer_list.item(i).setSelected(True)
+    
+    def add_selected_printers(self):
+        """Add selected printers and close dialog"""
+        selected_printers = []
+        for item in self.printer_list.selectedItems():
+            printer_info = item.data(Qt.UserRole)
+            if printer_info:
+                selected_printers.append(printer_info)
+        
+        if not selected_printers:
+            QMessageBox.warning(self, "Selection Error", "Please select at least one printer")
+            return
+        
+        # Debug info
+        print(f"Selected {len(selected_printers)} printers:")
+        for i, printer in enumerate(selected_printers):
+            print(f"  {i+1}. {printer['ip']} - Port {printer['port']}")
+        
+        # Emit signal with selected printers
+        self.printers_selected.emit(selected_printers)
+        
+        # Close the dialog
+        self.accept()
 
 class PrinterSetupWindow(QMainWindow):
     # Signal for when printer is saved
@@ -108,6 +525,28 @@ class PrinterSetupWindow(QMainWindow):
         title_layout.addWidget(title_label)
         frame_layout.addWidget(title_frame)
         
+        # Auto-detect button (only when not in edit mode)
+        if not self.edit_mode:
+            auto_detect_layout = QHBoxLayout()
+            self.auto_detect_button = QPushButton("🔍 Auto-Detect Printers")
+            self.auto_detect_button.setStyleSheet("""
+                QPushButton {
+                    background-color: #f59e0b;
+                    color: white;
+                    padding: 8px 16px;
+                    font-weight: bold;
+                    border-radius: 6px;
+                    margin-bottom: 10px;
+                }
+                QPushButton:hover {
+                    background-color: #d97706;
+                }
+            """)
+            self.auto_detect_button.clicked.connect(self.open_auto_detect_dialog)
+            auto_detect_layout.addWidget(self.auto_detect_button)
+            auto_detect_layout.addStretch()
+            frame_layout.addLayout(auto_detect_layout)
+        
         # Form fields
         self.create_form_fields(frame_layout)
         
@@ -136,6 +575,212 @@ class PrinterSetupWindow(QMainWindow):
         # Populate form if in edit mode
         if self.edit_mode:
             self.populate_form()
+    
+    def open_auto_detect_dialog(self):
+        """Open the auto-detect printers dialog"""
+        try:
+            dialog = PrinterSelectionDialog(self)
+            
+            # Explicitly connect the signal
+            dialog.printers_selected.connect(self._on_printers_selected)
+            
+            # Execute the dialog (modal)
+            result = dialog.exec_()
+            print(f"Dialog closed with result: {result}")
+            
+        except Exception as e:
+            print(f"Error in auto-detect dialog: {str(e)}")
+            QMessageBox.critical(self, "Error", f"An error occurred: {str(e)}")
+            
+    def _on_printers_selected(self, selected_printers):
+        """Explicitly handle the selected printers signal"""
+        print(f"Signal received with {len(selected_printers)} printers")
+        
+        # Process the selected printers
+        self.handle_detected_printers(selected_printers)
+    
+    def handle_detected_printers(self, selected_printers):
+        """Handle the selected printers from auto-detection"""
+        print(f"Processing {len(selected_printers)} selected printers")
+        
+        if not selected_printers:
+            print("No printers to process")
+            return
+        
+        if len(selected_printers) == 1:
+            # If only one printer selected, populate the form
+            printer = selected_printers[0]
+            print(f"Populating form with single printer: {printer['ip']}")
+            self.populate_form_from_printer(printer)
+        else:
+            # If multiple printers, ask user if they want to save all
+            message = (f"You selected {len(selected_printers)} printers.\n\n"
+                      f"• Click 'Save All' to automatically save all printers with default settings\n"
+                      f"• Click 'Edit First' to fill the form with the first printer to edit before saving\n"
+                      f"• Click 'Cancel' to close this dialog")
+            
+            reply = QMessageBox.question(
+                self, 
+                "Multiple Printers Selected", 
+                message,
+                QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel, 
+                QMessageBox.Yes
+            )
+            
+            if reply == QMessageBox.Yes:
+                # Save all printers
+                print(f"Saving all {len(selected_printers)} printers")
+                self.save_multiple_printers(selected_printers)
+            elif reply == QMessageBox.No:
+                # Just populate form with first printer
+                print("Populating form with first printer")
+                self.populate_form_from_printer(selected_printers[0])
+            else:
+                print("Operation canceled by user")
+                # If Cancel, do nothing
+            
+    def populate_form_from_printer(self, printer):
+        """Populate form fields from detected printer"""
+        # Set printer name with a meaningful default
+        self.printer_name.setText(printer.get('name', f"Thermal Printer ({printer['ip']})"))
+        
+        # Set printer type
+        printer_type = printer.get('model', 'Thermal').capitalize()
+        index = self.printer_type.findText(printer_type)
+        if index >= 0:
+            self.printer_type.setCurrentIndex(index)
+            
+        # Set IP and port
+        self.printer_ip.setText(printer.get('ip', ''))
+        self.printer_port.setText(printer.get('port', '9100'))
+        
+        # Select medium font size as default (commonly used)
+        for i in range(self.font_size.count()):
+            if self.font_size.itemData(i) == 'B':  # Medium font
+                self.font_size.setCurrentIndex(i)
+                break
+        
+        # Default to disabled header and footer (safer default)
+        if hasattr(self, 'disable_header') and hasattr(self, 'disable_footer'):
+            self.disable_header.setChecked(True)
+            self.disable_footer.setChecked(True)
+            
+            # Clear any existing text
+            if hasattr(self, 'token_header') and hasattr(self, 'token_footer'):
+                self.token_header.clear()
+                self.token_footer.clear()
+        
+        QMessageBox.information(self, "Printer Loaded", 
+                              f"Printer {printer['ip']} loaded into form.\n\nYou can modify details before saving.")
+    
+    def save_multiple_printers(self, printers):
+        """Save multiple printers automatically"""
+        progress_dialog = QMessageBox(self)
+        progress_dialog.setWindowTitle("Saving Printers")
+        progress_dialog.setText("Starting batch save operation...")
+        progress_dialog.setStandardButtons(QMessageBox.NoButton)
+        progress_dialog.show()
+        
+        saved_count = 0
+        errors = []
+        
+        for i, printer in enumerate(printers):
+            try:
+                # Update progress
+                progress_dialog.setText(f"Saving printer {i+1} of {len(printers)}...\n{printer['ip']}")
+                QApplication.processEvents()  # Allow UI to update
+                
+                # Create default printer data
+                printer_data = {
+                    'name': printer.get('name', f"Thermal Printer ({printer['ip']})"),
+                    'type': printer.get('model', 'thermal').lower(),
+                    'ip': printer['ip'],
+                    'port': printer.get('port', '9100'),
+                    'fontSize': 'B',  # Medium font
+                    'header': {'enable': False, 'text': ''},
+                    'footer': {'enable': False, 'text': ''}
+                }
+                
+                # Connect to database
+                conn = self.db_connect()
+                if not conn:
+                    errors.append(f"Database connection failed for {printer['ip']}")
+                    continue
+                
+                cursor = conn.cursor()
+                device_number = self.get_next_device_number(cursor, printer_data['name'])
+                
+                # Create database entry
+                now = datetime.now()
+                formatted_now = now.strftime('%Y-%m-%d %H:%M:%S')
+                
+                # Default username/password for printers
+                username = "admin"
+                password = "admin"
+                
+                # Location string with font size (required by the system)
+                location = f"FontSize:{printer_data['fontSize']}"
+                
+                # Insert into database
+                sql = """
+                INSERT INTO configh (
+                    DeviceType, DeviceNumber, IP, Port, ComUser, 
+                    comKey, Enable, CreatedDateTime, DevicePrinterIP, DeviceLocation
+                ) VALUES (
+                     %s, %s, %s, %s, %s, 
+                    AES_ENCRYPT(%s, SHA2(CONCAT('pg2175', %s), 512)), 
+                    %s, %s, %s, %s
+                )
+                """
+                
+                values = (
+                    printer_data['name'],  # DeviceType
+                    device_number,
+                    printer_data['ip'],    # IP
+                    printer_data['port'],
+                    username,
+                    password,
+                    formatted_now,  # Pass timestamp for encryption
+                    'Y',            # Enable value
+                    formatted_now,  # CreatedDateTime field
+                    "",             # DevicePrinterIP - empty for printers
+                    location        # DeviceLocation with font size
+                )
+                
+                cursor.execute(sql, values)
+                conn.commit()
+                
+                # Update printer_data with device number for JSON
+                printer_data['deviceNumber'] = device_number
+                printer_data['enable'] = 'Y'
+                printer_data['location'] = location
+                
+                # Save to JSON as well
+                self.save_to_json(printer_data)
+                
+                # Emit signal
+                self.printer_saved.emit(printer_data)
+                
+                saved_count += 1
+                conn.close()
+                
+            except Exception as e:
+                errors.append(f"Error saving {printer['ip']}: {str(e)}")
+        
+        # Close progress dialog
+        progress_dialog.close()
+        
+        # Show results
+        message = f"Successfully saved {saved_count} out of {len(printers)} printers."
+        if errors:
+            message += f"\n\nErrors ({len(errors)}):\n" + "\n".join(errors[:5])
+            if len(errors) > 5:
+                message += f"\n... and {len(errors) - 5} more errors"
+        
+        if saved_count > 0:
+            message += "\n\nAll printers have been saved with default settings."
+        
+        QMessageBox.information(self, "Batch Save Results", message)
     
     def populate_form(self):
         """Populate form fields with data from the printer being edited"""
