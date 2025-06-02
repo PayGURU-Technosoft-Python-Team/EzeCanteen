@@ -107,6 +107,32 @@ def fetch_device_config(force_refresh=False):
         DEVICES.clear()
     
     try:
+        # Get the current license key first
+        license_key = ""
+        try:
+            # Create a license manager instance
+            license_manager = LicenseManager()
+            
+            # We need to run the async method in a synchronous context
+            def get_license_data():
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    license_data = loop.run_until_complete(license_manager.get_license_db())
+                    return license_data
+                finally:
+                    loop.close()
+            
+            # Get license data and extract the key
+            license_data = get_license_data()
+            if license_data and 'LicenseKey' in license_data:
+                license_key = license_data['LicenseKey']
+                logging.info(f"Retrieved license key for device filtering: {license_key}")
+            else:
+                logging.warning("Could not retrieve license key for device filtering")
+        except Exception as e:
+            logging.error(f"Error getting license key: {e}")
+        
         # Connect to the database
         logging.info(f"Connecting to database at {DB_HOST}:{DB_PORT}")
         conn = mysql.connector.connect(
@@ -120,20 +146,85 @@ def fetch_device_config(force_refresh=False):
         # Create a cursor
         cursor = conn.cursor(dictionary=True)
         
-        # Query to fetch all devices from configh table
+        # Query to fetch devices associated with the current license key
         sql = """
+        SELECT 
+            c.SrNo, c.DeviceType, c.DeviceNumber, c.IP, c.Port, c.DeviceLocation, c.ComUser, 
+            c.Enable, c.DevicePrinterIP, c.DeviceName,
+            AES_DECRYPT(c.comKey, SHA2(CONCAT('pg2175', c.CreatedDateTime), 512)) as Pwd
+        FROM configh c
+        JOIN license_devices ld ON c.SrNo = ld.DeviceID
+        JOIN licenses l ON ld.LicenseID = l.ID
+        WHERE c.Enable = 'Y' AND l.LicenseKey = %s
+        ORDER BY c.DeviceType, c.DeviceNumber
+        """
+        
+        # Fallback query if no license key or if the join query fails
+        fallback_sql = """
         SELECT 
             SrNo, DeviceType, DeviceNumber, IP, Port, DeviceLocation, ComUser, 
             Enable, DevicePrinterIP, DeviceName,
             AES_DECRYPT(comKey, SHA2(CONCAT('pg2175', CreatedDateTime), 512)) as Pwd
         FROM configh
-        WHERE Enable = 'Y' 
+        WHERE Enable = 'Y' AND LicenseKey = %s
         ORDER BY DeviceType, DeviceNumber
         """
         
-        logging.info("Executing database query for device configuration")
-        cursor.execute(sql)
-        results = cursor.fetchall()
+        # Second fallback if license key column doesn't exist
+        legacy_fallback_sql = """
+        SELECT 
+            SrNo, DeviceType, DeviceNumber, IP, Port, DeviceLocation, ComUser, 
+            Enable, DevicePrinterIP, DeviceName,
+            AES_DECRYPT(comKey, SHA2(CONCAT('pg2175', CreatedDateTime), 512)) as Pwd
+        FROM configh
+        WHERE Enable = 'Y'
+        ORDER BY DeviceType, DeviceNumber
+        LIMIT 5  # Limit to prevent loading too many devices
+        """
+        
+        logging.info(f"Fetching devices for license key: {license_key}")
+        
+        # Try the main query with license key join first
+        try:
+            cursor.execute(sql, (license_key,))
+            results = cursor.fetchall()
+            if results:
+                logging.info(f"Found {len(results)} devices using license key join query")
+            else:
+                # If no results, try the fallback query
+                logging.info("No devices found with license key join, trying fallback query")
+                try:
+                    cursor.execute(fallback_sql, (license_key,))
+                    results = cursor.fetchall()
+                    if results:
+                        logging.info(f"Found {len(results)} devices using fallback query")
+                    else:
+                        # If still no results and license key exists, log warning and use legacy fallback
+                        if license_key:
+                            logging.warning(f"No devices found for license key {license_key}, using limited legacy query")
+                        else:
+                            logging.warning("No license key available, using limited legacy query")
+                        
+                        cursor.execute(legacy_fallback_sql)
+                        results = cursor.fetchall()
+                        logging.info(f"Found {len(results)} devices using limited legacy query")
+                except Exception as inner_e:
+                    logging.error(f"Error executing fallback query: {inner_e}")
+                    cursor.execute(legacy_fallback_sql)
+                    results = cursor.fetchall()
+                    logging.info(f"Used legacy fallback query after error, found {len(results)} devices")
+        except Exception as outer_e:
+            logging.error(f"Error executing license key join query: {outer_e}")
+            # Try fallback query
+            try:
+                cursor.execute(fallback_sql, (license_key,))
+                results = cursor.fetchall()
+                logging.info(f"Used fallback query after error, found {len(results)} devices")
+            except Exception as e2:
+                logging.error(f"Both queries failed, using legacy fallback: {e2}")
+                cursor.execute(legacy_fallback_sql)
+                results = cursor.fetchall()
+                logging.info(f"Used legacy fallback query after all errors, found {len(results)} devices")
         
         if not results:
             logging.warning("No enabled devices found in database, using default values")
