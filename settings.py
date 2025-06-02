@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
     QLabel, QCheckBox, QLineEdit, QFrame, QScrollArea, QDialog, QProgressBar, QMessageBox, QSizePolicy
 )
-from PyQt5.QtCore import Qt, QTimer, QPropertyAnimation, QEasingCurve, QRect, QDateTime
+from PyQt5.QtCore import Qt, QTimer, QPropertyAnimation, QEasingCurve, QRect, QDateTime, QRunnable, QObject, pyqtSignal, QThreadPool
 from PyQt5.QtGui import QColor
 import os
 import mysql.connector  # Added for database connection
@@ -16,6 +16,7 @@ from datetime import timedelta
 from AddMail import send_daily_report_email
 import threading
 import time
+import logging
 
 # Database configuration
 DB_HOST = "103.216.211.36"
@@ -23,7 +24,7 @@ DB_USER = "pgcanteen"
 DB_PORT = 33975
 DB_PASS = "L^{Z,8~zzfF9(nd8"
 DB_NAME = "payguru_canteen"
-
+   
 # Import the EzeeCanteen class from timeBase.py
 try:
     from timeBase import EzeeCanteen
@@ -144,15 +145,16 @@ class LoadingOverlay(QDialog):
         print("Cancel clear cache triggered")
 
 class EzeeCanteenWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, LK):
         super().__init__()
         self.setWindowTitle("EzeeCanteen")
-        self.setGeometry(100, 100, 800, 600)
+        self.setGeometry(100, 100, 1024, 900)
         self.printers = []
         self.devices = []
         self.port_number = ""
         self.init_ui()
-        
+        self.license_key = LK  # Store the license key
+        self.license_key = LK
         print("Setting up loading process...")
         
         # Skip async loading and only use manual loading
@@ -196,8 +198,8 @@ class EzeeCanteenWindow(QMainWindow):
                             SELECT DeviceType, DeviceNumber, IP, Port, DeviceLocation, ComUser,
                                    Enable, DevicePrinterIP 
                             FROM configh 
-                            WHERE DeviceType = 'Printer' OR DeviceType != 'Device'
-                        """)
+                            WHERE LicenseKey = %s AND (DeviceType = 'Printer' OR DeviceType != 'Device')
+                        """, (self.license_key,))
                         printer_data = alt_cursor.fetchall()
                         
                         # Fetch devices
@@ -205,8 +207,8 @@ class EzeeCanteenWindow(QMainWindow):
                             SELECT DeviceType, DeviceNumber, IP, Port, DeviceLocation, ComUser,
                                    Enable, DevicePrinterIP 
                             FROM configh 
-                            WHERE DeviceType = 'Device'
-                        """)
+                            WHERE LicenseKey = %s AND DeviceType = 'Device'
+                        """, (self.license_key,))
                         device_data = alt_cursor.fetchall()
                         
                         self.printers = []
@@ -264,10 +266,11 @@ class EzeeCanteenWindow(QMainWindow):
                 sql = """
                 SELECT SrNo, DeviceType, DeviceNumber, IP, Port, DeviceLocation, ComUser,
                        Enable, DevicePrinterIP 
-                FROM configh
+                FROM configh 
+                WHERE LicenseKey = %s
                 ORDER BY DeviceType, DeviceNumber
                 """
-                cursor.execute(sql)
+                cursor.execute(sql, (self.license_key,))
                 devices_data = cursor.fetchall()
                 
                 print(f"Manual loader: Found {len(devices_data)} devices in database")
@@ -280,7 +283,7 @@ class EzeeCanteenWindow(QMainWindow):
                     print(f"Manual loader processing: {device}")
                     if device.get('DeviceType') == 'Printer' or device.get('DeviceType') != 'Device':
                         self.printers.append({
-                            'name': 'CITIZEN',
+                            'name': device.get('DeviceType', 'Printer'),
                             'ip': device['IP'],
                             'deviceNumber': device.get('DeviceNumber'),
                             'type': 'thermal',
@@ -392,11 +395,12 @@ class EzeeCanteenWindow(QMainWindow):
                 SrNo, DeviceType, DeviceNumber, IP, Port, DeviceLocation, ComUser, 
                 Enable, DevicePrinterIP, DeviceName
             FROM configh
+            WHERE LicenseKey = %s
             ORDER BY DeviceType, DeviceNumber
             """
             
             print(f"Executing query: {sql.strip()}")
-            cursor.execute(sql)
+            cursor.execute(sql, (self.license_key,))
             results = cursor.fetchall()
             print(f"Query returned {len(results)} total rows")
             
@@ -508,9 +512,27 @@ class EzeeCanteenWindow(QMainWindow):
         # Main widget and layout
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
-        self.main_layout = QVBoxLayout(self.central_widget)
+        
+        # Create a scroll area for the main content
+        main_scroll_area = QScrollArea()
+        main_scroll_area.setWidgetResizable(True)
+        main_scroll_area.setStyleSheet("border: none; background-color: transparent;")
+        main_scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        main_scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        
+        # Content widget that will hold everything
+        content_widget = QWidget()
+        content_widget.setStyleSheet("background-color: #1f2937; color: white; font-family: Arial, sans-serif;")
+        self.main_layout = QVBoxLayout(content_widget)
         self.main_layout.setContentsMargins(32, 32, 32, 32)
-        self.central_widget.setStyleSheet("background-color: #1f2937; color: white; font-family: Arial, sans-serif;")
+        
+        # Set the content widget to the scroll area
+        main_scroll_area.setWidget(content_widget)
+        
+        # Add scroll area to central widget
+        central_layout = QVBoxLayout(self.central_widget)
+        central_layout.setContentsMargins(0, 0, 0, 0)
+        central_layout.addWidget(main_scroll_area)
         
         # Header
         header = QFrame()
@@ -1339,9 +1361,27 @@ class EzeeCanteenWindow(QMainWindow):
         # Recreate the central widget and UI
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
-        self.main_layout = QVBoxLayout(self.central_widget)
+        
+        # Create a scroll area for the main content
+        main_scroll_area = QScrollArea()
+        main_scroll_area.setWidgetResizable(True)
+        main_scroll_area.setStyleSheet("border: none; background-color: transparent;")
+        main_scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        main_scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        
+        # Content widget that will hold everything
+        content_widget = QWidget()
+        content_widget.setStyleSheet("background-color: #1f2937; color: white; font-family: Arial, sans-serif;")
+        self.main_layout = QVBoxLayout(content_widget)
         self.main_layout.setContentsMargins(32, 32, 32, 32)
-        self.central_widget.setStyleSheet("background-color: #1f2937; color: white; font-family: Arial, sans-serif;")
+        
+        # Set the content widget to the scroll area
+        main_scroll_area.setWidget(content_widget)
+        
+        # Add scroll area to central widget
+        central_layout = QVBoxLayout(self.central_widget)
+        central_layout.setContentsMargins(0, 0, 0, 0)
+        central_layout.addWidget(main_scroll_area)
         
         # Re-initialize the UI
         self.init_ui()
@@ -1400,9 +1440,27 @@ class EzeeCanteenWindow(QMainWindow):
         # Recreate the central widget and UI
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
-        self.main_layout = QVBoxLayout(self.central_widget)
+        
+        # Create a scroll area for the main content
+        main_scroll_area = QScrollArea()
+        main_scroll_area.setWidgetResizable(True)
+        main_scroll_area.setStyleSheet("border: none; background-color: transparent;")
+        main_scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        main_scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        
+        # Content widget that will hold everything
+        content_widget = QWidget()
+        content_widget.setStyleSheet("background-color: #1f2937; color: white; font-family: Arial, sans-serif;")
+        self.main_layout = QVBoxLayout(content_widget)
         self.main_layout.setContentsMargins(32, 32, 32, 32)
-        self.central_widget.setStyleSheet("background-color: #1f2937; color: white; font-family: Arial, sans-serif;")
+        
+        # Set the content widget to the scroll area
+        main_scroll_area.setWidget(content_widget)
+        
+        # Add scroll area to central widget
+        central_layout = QVBoxLayout(self.central_widget)
+        central_layout.setContentsMargins(0, 0, 0, 0)
+        central_layout.addWidget(main_scroll_area)
         
         # Re-initialize the UI
         self.init_ui()
@@ -1419,136 +1477,149 @@ class EzeeCanteenWindow(QMainWindow):
         QTimer.singleShot(500, self.refresh_all_statuses)
     
     def refresh_all_statuses(self):
-        """Refresh the status of all printers and devices using parallel processing"""
+        """Refresh the status of all printers and devices using QThreadPool"""
         try:
-            # Check if widgets still exist
+            # Check if widgets still exist and window is active
+            if not self.isVisible() or self.isHidden():
+                return
+                
             if not hasattr(self, 'printers_list') or self.printers_list is None or sip.isdeleted(self.printers_list):
-                # Stop the timer if the widgets are gone
                 if hasattr(self, 'refresh_status_timer'):
                     self.refresh_status_timer.stop()
                 return
                 
             if not hasattr(self, 'devices_list') or self.devices_list is None or sip.isdeleted(self.devices_list):
-                # Stop the timer if the widgets are gone
                 if hasattr(self, 'refresh_status_timer'):
                     self.refresh_status_timer.stop()
                 return
-                
-            # Collect devices to check
-            devices_to_check = []
             
-            # Add printers
+            # Initialize thread pool if not already done
+            if not hasattr(self, 'threadpool'):
+                self.threadpool = QThreadPool()
+                self.threadpool.setMaxThreadCount(10)  # Limit concurrent threads
+            
+            # Counter for online devices
+            self.online_printers = 0
+            self.online_devices = 0
+            
+            # Create a callback to handle worker results
+            def handle_result(index, is_online, is_printer):
+                try:
+                    # Check if window is still active
+                    if not self.isVisible() or self.isHidden():
+                        return
+                    
+                    if is_printer:
+                        # Update printer status
+                        if index < len(self.printers):
+                            self.printers[index]['enable'] = 'Y' if is_online else 'N'
+                            
+                            # Update printer UI if widget exists
+                            printer_widget = self.printers_list.findChild(QFrame, f"printer-{index}")
+                            if printer_widget and not sip.isdeleted(printer_widget) and printer_widget.isVisible():
+                                if is_online:
+                                    printer_widget.setStyleSheet("background-color: #15803d; border-radius: 4px; padding: 2px 4px; margin-bottom: 2px;")
+                                    self.online_printers += 1
+                                else:
+                                    printer_widget.setStyleSheet("background-color: #b91c1c; border-radius: 4px; padding: 2px 4px; margin-bottom: 2px;")
+                                
+                                # Update edit button style if it exists
+                                edit_button = printer_widget.findChild(QPushButton, f"editPButton-{index}")
+                                if edit_button and not sip.isdeleted(edit_button) and edit_button.isVisible():
+                                    if is_online:
+                                        edit_button.setStyleSheet("""
+                                            QPushButton {
+                                                background-color: #ca8a04;
+                                                color: white;
+                                                padding: 1px 4px;
+                                                border-radius: 3px;
+                                                font-weight: bold;
+                                                font-size: 11px;
+                                            }
+                                            QPushButton:hover {
+                                                background-color: #a16207;
+                                            }
+                                        """)
+                                    else:
+                                        edit_button.setStyleSheet("""
+                                            QPushButton {
+                                                background-color: #4b5563;
+                                                color: white;
+                                                padding: 1px 4px;
+                                                border-radius: 3px;
+                                                font-weight: bold;
+                                                font-size: 11px;
+                                            }
+                                            QPushButton:hover {
+                                                background-color: #6b7280;
+                                            }
+                                        """)
+                    else:
+                        # Update device status
+                        if index < len(self.devices):
+                            self.devices[index]['enable'] = 'Y' if is_online else 'N'
+                            
+                            # Update device UI if widget exists
+                            device_widget = self.devices_list.findChild(QFrame, f"device-{index}")
+                            if device_widget and not sip.isdeleted(device_widget) and device_widget.isVisible():
+                                if is_online:
+                                    device_widget.setStyleSheet("background-color: #15803d; border-radius: 6px; padding: 2px 4px; margin-bottom: 2px;")
+                                    self.online_devices += 1
+                                else:
+                                    device_widget.setStyleSheet("background-color: #b91c1c; border-radius: 6px; padding: 2px 4px; margin-bottom: 2px;")
+                                
+                                # Update edit button style if it exists
+                                edit_button = device_widget.findChild(QPushButton, f"editDButton-{index}")
+                                if edit_button and not sip.isdeleted(edit_button) and edit_button.isVisible():
+                                    if is_online:
+                                        edit_button.setStyleSheet("""
+                                            QPushButton {
+                                                background-color: #ca8a04;
+                                                color: white;
+                                                padding: 1px 4px;
+                                                border-radius: 3px;
+                                                font-weight: bold;
+                                                font-size: 11px;
+                                            }
+                                            QPushButton:hover {
+                                                background-color: #a16207;
+                                            }
+                                        """)
+                                    else:
+                                        edit_button.setStyleSheet("""
+                                            QPushButton {
+                                                background-color: #4b5563;
+                                                color: white;
+                                                padding: 1px 4px;
+                                                border-radius: 3px;
+                                                font-weight: bold;
+                                                font-size: 11px;
+                                            }
+                                            QPushButton:hover {
+                                                background-color: #6b7280;
+                                            }
+                                        """)
+                except Exception as e:
+                    print(f"Error updating UI in handle_result: {e}")
+            
+            # Create and start workers for each device/printer
             for i, printer in enumerate(self.printers):
                 ip = printer.get('ip')
                 if ip:
                     port = printer.get('port', '9100')
-                    devices_to_check.append((i, ip, port, True))  # True = is_printer
+                    worker = DeviceStatusWorker(i, ip, port, True)
+                    worker.signals.finished.connect(handle_result)
+                    self.threadpool.start(worker)
             
-            # Add devices
             for i, device in enumerate(self.devices):
                 ip = device.get('ip')
                 if ip:
                     port = device.get('port', '80')
-                    devices_to_check.append((i, ip, port, False))  # False = not a printer
+                    worker = DeviceStatusWorker(i, ip, port, False)
+                    worker.signals.finished.connect(handle_result)
+                    self.threadpool.start(worker)
             
-            # Run parallel checks (max 10 workers)
-            check_results = self.check_online_status_parallel(devices_to_check, max_workers=10)
-            
-            # Process results
-            online_printers = 0
-            online_devices = 0
-            
-            for index, is_online, is_printer in check_results:
-                if is_printer:
-                    # Update printer status
-                    self.printers[index]['enable'] = 'Y' if is_online else 'N'
-                    
-                    # Update printer UI
-                    printer_widget = self.printers_list.findChild(QFrame, f"printer-{index}")
-                    if printer_widget and not sip.isdeleted(printer_widget):
-                        if is_online:
-                            printer_widget.setStyleSheet("background-color: #15803d; border-radius: 4px; padding: 2px 4px; margin-bottom: 2px;")
-                            online_printers += 1
-                        else:
-                            printer_widget.setStyleSheet("background-color: #b91c1c; border-radius: 4px; padding: 2px 4px; margin-bottom: 2px;")
-                        
-                        # Update edit button style
-                        edit_button = printer_widget.findChild(QPushButton, f"editPButton-{index}")
-                        if edit_button and not sip.isdeleted(edit_button):
-                            if is_online:
-                                edit_button.setStyleSheet("""
-                                    QPushButton {
-                                        background-color: #ca8a04;
-                                        color: white;
-                                        padding: 1px 4px;
-                                        border-radius: 3px;
-                                        font-weight: bold;
-                                        font-size: 11px;
-                                    }
-                                    QPushButton:hover {
-                                        background-color: #a16207;
-                                    }
-                                """)
-                            else:
-                                edit_button.setStyleSheet("""
-                                    QPushButton {
-                                        background-color: #4b5563;
-                                        color: white;
-                                        padding: 1px 4px;
-                                        border-radius: 3px;
-                                        font-weight: bold;
-                                        font-size: 11px;
-                                    }
-                                    QPushButton:hover {
-                                        background-color: #6b7280;
-                                    }
-                                """)
-                else:
-                    # Update device status
-                    self.devices[index]['enable'] = 'Y' if is_online else 'N'
-                    
-                    # Update device UI
-                    device_widget = self.devices_list.findChild(QFrame, f"device-{index}")
-                    if device_widget and not sip.isdeleted(device_widget):
-                        if is_online:
-                            device_widget.setStyleSheet("background-color: #15803d; border-radius: 6px; padding: 2px 4px; margin-bottom: 2px;")
-                            online_devices += 1
-                        else:
-                            device_widget.setStyleSheet("background-color: #b91c1c; border-radius: 6px; padding: 2px 4px; margin-bottom: 2px;")
-                        
-                        # Update edit button style
-                        edit_button = device_widget.findChild(QPushButton, f"editDButton-{index}")
-                        if edit_button and not sip.isdeleted(edit_button):
-                            if is_online:
-                                edit_button.setStyleSheet("""
-                                    QPushButton {
-                                        background-color: #ca8a04;
-                                        color: white;
-                                        padding: 1px 4px;
-                                        border-radius: 3px;
-                                        font-weight: bold;
-                                        font-size: 11px;
-                                    }
-                                    QPushButton:hover {
-                                        background-color: #a16207;
-                                    }
-                                """)
-                            else:
-                                edit_button.setStyleSheet("""
-                                    QPushButton {
-                                        background-color: #4b5563;
-                                        color: white;
-                                        padding: 1px 4px;
-                                        border-radius: 3px;
-                                        font-weight: bold;
-                                        font-size: 11px;
-                                    }
-                                    QPushButton:hover {
-                                        background-color: #6b7280;
-                                    }
-                                """)
-            
-            # Print periodic status update (but not every time to avoid console spam)
+            # Log status periodically
             if hasattr(self, 'status_update_counter'):
                 self.status_update_counter += 1
             else:
@@ -1558,10 +1629,11 @@ class EzeeCanteenWindow(QMainWindow):
             if self.status_update_counter % 10 == 0:
                 printer_count = len([p for p in self.printers if p.get('ip')])
                 device_count = len([d for d in self.devices if d.get('ip')])
-                print(f"Status update: {online_printers}/{printer_count} printers and {online_devices}/{device_count} devices online")
+                print(f"Status update: {self.online_printers}/{printer_count} printers and {self.online_devices}/{device_count} devices online")
             
             # Force UI update
             QApplication.processEvents()
+            
         except Exception as e:
             print(f"Error in refresh_all_statuses: {e}")
             import traceback
@@ -1581,12 +1653,52 @@ class EzeeCanteenWindow(QMainWindow):
         # Save current window geometry
         self.saved_geometry = self.geometry()
         
-        # Create EzeeCanteen widget
+        # Create loading indicator
+        loading_frame = QFrame(self)
+        loading_frame.setStyleSheet("background-color: #152238; border-radius: 8px; padding: 20px;")
+        loading_layout = QVBoxLayout(loading_frame)
+        
+        loading_label = QLabel("Loading Live Display...")
+        loading_label.setStyleSheet("font-size: 18px; color: white; font-weight: bold;")
+        loading_label.setAlignment(Qt.AlignCenter)
+        loading_layout.addWidget(loading_label)
+        
+        loading_progress = QProgressBar()
+        loading_progress.setStyleSheet("""
+            QProgressBar {
+                border: 2px solid #2c3e50;
+                border-radius: 5px;
+                text-align: center;
+                background-color: #1f2937;
+                height: 20px;
+            }
+            QProgressBar::chunk {
+                background-color: #3498db;
+                width: 10px;
+                margin: 0.5px;
+            }
+        """)
+        loading_progress.setMinimum(0)
+        loading_progress.setMaximum(0)  # Indeterminate progress
+        loading_layout.addWidget(loading_progress)
+        
+        # Replace central widget with loading screen
+        self.setCentralWidget(loading_frame)
+        
+        # Process events to show loading screen
+        QApplication.processEvents()
+        
+        # Use a timer to load EzeeCanteen after UI has updated
+        QTimer.singleShot(100, self.load_ezee_canteen)
+
+    def load_ezee_canteen(self):
+        """Load EzeeCanteen after showing loading screen"""
         try:
             # Import the timeBase module and get EzeeCanteen window
             from timeBase import main as timebase_main
             
             try:
+                # The modified timebase_main() will now force a refresh of device configurations
                 ezee_canteen = timebase_main()
                 
                 # Set up navigating back to settings
@@ -1610,6 +1722,7 @@ class EzeeCanteenWindow(QMainWindow):
                 
                 # Create an error display frame
                 error_frame = QFrame()
+                error_frame.setStyleSheet("background-color: #1f2937; padding: 20px;")
                 error_layout = QVBoxLayout(error_frame)
                 
                 error_title = QLabel("Error Loading Display")
@@ -1624,6 +1737,7 @@ class EzeeCanteenWindow(QMainWindow):
                 # Add a scrollable text area for the detailed error
                 details_scroll = QScrollArea()
                 details_scroll.setWidgetResizable(True)
+                details_scroll.setStyleSheet("border: none; background-color: transparent;")
                 details_widget = QWidget()
                 details_layout = QVBoxLayout(details_widget)
                 
@@ -1676,31 +1790,125 @@ class EzeeCanteenWindow(QMainWindow):
             traceback.print_exc()
     
     def return_from_display(self):
-        # Remove the display view
-        display_view = self.centralWidget()
+        # Create and show loading screen first
+        loading_frame = QFrame(self)
+        loading_frame.setStyleSheet("background-color: #152238; border-radius: 8px; padding: 20px;")
+        loading_layout = QVBoxLayout(loading_frame)
+        
+        loading_label = QLabel("Returning to Settings...")
+        loading_label.setStyleSheet("font-size: 18px; color: white; font-weight: bold;")
+        loading_label.setAlignment(Qt.AlignCenter)
+        loading_layout.addWidget(loading_label)
+        
+        loading_progress = QProgressBar()
+        loading_progress.setStyleSheet("""
+            QProgressBar {
+                border: 2px solid #2c3e50;
+                border-radius: 5px;
+                text-align: center;
+                background-color: #1f2937;
+                height: 20px;
+            }
+            QProgressBar::chunk {
+                background-color: #3498db;
+                width: 10px;
+                margin: 0.5px;
+            }
+        """)
+        loading_progress.setMinimum(0)
+        loading_progress.setMaximum(0)  # Indeterminate progress
+        loading_layout.addWidget(loading_progress)
+        
+        # Set loading frame as central widget
+        self.setCentralWidget(loading_frame)
+        
+        # Process events to show loading screen
+        QApplication.processEvents()
+
+        # Get the current central widget (timeBase window)
+        display_view = loading_frame
+        if hasattr(self, 'old_central_widget') and isinstance(self.old_central_widget, QWidget):
+            display_view = self.old_central_widget
+
         if display_view:
-            display_view.setParent(None)
-        
-        # Recreate the central widget and UI
-        self.central_widget = QWidget()
-        self.setCentralWidget(self.central_widget)
-        self.main_layout = QVBoxLayout(self.central_widget)
-        self.main_layout.setContentsMargins(32, 32, 32, 32)
-        self.central_widget.setStyleSheet("background-color: #1f2937; color: white; font-family: Arial, sans-serif;")
-        
-        # Re-initialize the UI
-        self.init_ui()
-        
-        # Restore original geometry
-        if hasattr(self, 'saved_geometry'):
-            self.setGeometry(self.saved_geometry)
-        
-        # Explicitly repopulate the printers and devices with existing data
-        self.populate_printers()    
-        self.populate_devices()
-        
-        # Update device status after a short delay to ensure UI is ready
-        QTimer.singleShot(500, self.refresh_all_statuses)
+            # Stop all authentication monitors and clean up their resources
+            if hasattr(display_view, 'active_devices'):
+                for device_ip, device_info in display_view.active_devices.items():
+                    monitor = device_info.get('monitor')
+                    if monitor and monitor.isRunning():
+                        try:
+                            # Stop the auth monitor thread
+                            monitor.stop()
+                            if not monitor.wait(1000):  # 1 second timeout
+                                monitor.terminate()
+                                monitor.wait()
+                            logging.info(f"Stopped monitor for device {device_ip}")
+                        except Exception as e:
+                            logging.error(f"Error stopping monitor for device {device_ip}: {e}")
+
+            # Stop the communicator server if it exists
+            if hasattr(display_view, 'communicator'):
+                try:
+                    display_view.communicator.stop_server.emit()
+                    logging.info("Emitted stop signal to communicator server")
+                except Exception as e:
+                    logging.error(f"Error stopping communicator server: {e}")
+
+            # Stop any watchdog timers
+            if hasattr(display_view, 'watchdog_timer') and display_view.watchdog_timer.isActive():
+                display_view.watchdog_timer.stop()
+
+            # Clean up any printer check timers
+            if hasattr(display_view, 'printer_check_timer') and display_view.printer_check_timer.isActive():
+                display_view.printer_check_timer.stop()
+
+            # Remove the display view after cleanup
+            if display_view != loading_frame:
+                display_view.setParent(None)
+
+        # Use QTimer to delay the UI reconstruction slightly to ensure loading screen is visible
+        def rebuild_ui():
+            # Recreate the central widget and UI
+            self.central_widget = QWidget()
+            self.setCentralWidget(self.central_widget)
+            
+            # Create a scroll area for the main content
+            main_scroll_area = QScrollArea()
+            main_scroll_area.setWidgetResizable(True)
+            main_scroll_area.setStyleSheet("border: none; background-color: transparent;")
+            main_scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+            main_scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+            
+            # Content widget that will hold everything
+            content_widget = QWidget()
+            content_widget.setStyleSheet("background-color: #1f2937; color: white; font-family: Arial, sans-serif;")
+            self.main_layout = QVBoxLayout(content_widget)
+            self.main_layout.setContentsMargins(32, 32, 32, 32)
+            
+            # Set the content widget to the scroll area
+            main_scroll_area.setWidget(content_widget)
+            
+            # Add scroll area to central widget
+            central_layout = QVBoxLayout(self.central_widget)
+            central_layout.setContentsMargins(0, 0, 0, 0)
+            central_layout.addWidget(main_scroll_area)
+            
+            # Re-initialize the UI
+            self.init_ui()
+            
+            # Restore original geometry
+            if hasattr(self, 'saved_geometry'):
+                self.setGeometry(self.saved_geometry)
+            
+            # Explicitly repopulate the printers and devices with existing data
+            self.populate_printers()    
+            self.populate_devices()
+            
+            # Update device status after a short delay to ensure UI is ready
+            QTimer.singleShot(500, self.refresh_all_statuses)
+
+        # Delay the UI rebuild slightly to show loading screen
+        QTimer.singleShot(500, rebuild_ui)
     
     def meal_settings(self):
         print("Navigating to canteen settings")
@@ -1717,6 +1925,41 @@ class EzeeCanteenWindow(QMainWindow):
         
         # Save current window geometry
         self.saved_geometry = self.geometry()
+        
+        # Create loading indicator
+        loading_frame = QFrame(self)
+        loading_frame.setStyleSheet("background-color: #152238; border-radius: 8px; padding: 20px;")
+        loading_layout = QVBoxLayout(loading_frame)
+        
+        loading_label = QLabel("Loading Canteen Settings...")
+        loading_label.setStyleSheet("font-size: 18px; color: white; font-weight: bold;")
+        loading_label.setAlignment(Qt.AlignCenter)
+        loading_layout.addWidget(loading_label)
+        
+        loading_progress = QProgressBar()
+        loading_progress.setStyleSheet("""
+            QProgressBar {
+                border: 2px solid #2c3e50;
+                border-radius: 5px;
+                text-align: center;
+                background-color: #1f2937;
+                height: 20px;
+            }
+            QProgressBar::chunk {
+                background-color: #3498db;
+                width: 10px;
+                margin: 0.5px;
+            }
+        """)
+        loading_progress.setMinimum(0)
+        loading_progress.setMaximum(0)  # Indeterminate progress
+        loading_layout.addWidget(loading_progress)
+        
+        # Replace central widget with loading screen
+        self.setCentralWidget(loading_frame)
+        
+        # Process events to show loading screen
+        QApplication.processEvents()
         
         try:
             # Create the EzeeCanteenApp instance - fixed import reference
@@ -1747,8 +1990,66 @@ class EzeeCanteenWindow(QMainWindow):
         except Exception as e:
             print(f"Error loading Canteen Settings view: {e}")
             import traceback
-            traceback.print_exc()
-
+            error_details = traceback.format_exc()
+            
+            # Create an error display frame
+            error_frame = QFrame()
+            error_frame.setStyleSheet("background-color: #1f2937; padding: 20px;")
+            error_layout = QVBoxLayout(error_frame)
+            
+            error_title = QLabel("Error Loading Canteen Settings")
+            error_title.setStyleSheet("font-size: 24px; font-weight: bold; color: #ef4444; margin-bottom: 16px;")
+            error_layout.addWidget(error_title, alignment=Qt.AlignCenter)
+            
+            error_message = QLabel(f"An error occurred while loading the canteen settings:\n{str(e)}")
+            error_message.setStyleSheet("font-size: 16px; color: white; margin-bottom: 16px;")
+            error_message.setWordWrap(True)
+            error_layout.addWidget(error_message)
+            
+            # Add a scrollable text area for the detailed error
+            details_scroll = QScrollArea()
+            details_scroll.setWidgetResizable(True)
+            details_scroll.setStyleSheet("border: none; background-color: transparent;")
+            details_widget = QWidget()
+            details_layout = QVBoxLayout(details_widget)
+            
+            details_label = QLabel("Error Details:")
+            details_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #9ca3af;")
+            details_layout.addWidget(details_label)
+            
+            details_text = QLabel(error_details)
+            details_text.setStyleSheet("font-family: monospace; font-size: 12px; color: #9ca3af; background-color: #1f2937; padding: 10px; border-radius: 4px;")
+            details_text.setWordWrap(True)
+            details_layout.addWidget(details_text)
+            
+            details_scroll.setWidget(details_widget)
+            details_scroll.setMaximumHeight(300)
+            error_layout.addWidget(details_scroll)
+            
+            # Add a "Back to Settings" button
+            back_button = QPushButton("Back to Settings")
+            back_button.setStyleSheet("""
+                QPushButton {
+                    background-color: #4f46e5;
+                    color: white;
+                    padding: 8px 16px;
+                    border-radius: 4px;
+                    font-weight: bold;
+                }
+                QPushButton:hover {
+                    background-color: #4338ca;
+                }
+            """)
+            back_button.clicked.connect(self.return_from_canteen_settings)
+            error_layout.addWidget(back_button, alignment=Qt.AlignCenter)
+            
+            # Set the error frame as the central widget
+            self.setCentralWidget(error_frame)
+            
+            # Log the error
+            print(f"Error loading Canteen Settings view: {e}")
+            print(error_details)
+    
     def return_from_canteen_settings(self):
         # Remove the canteen settings view
         canteen_view = self.centralWidget()
@@ -1758,9 +2059,27 @@ class EzeeCanteenWindow(QMainWindow):
         # Recreate the central widget and UI
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
-        self.main_layout = QVBoxLayout(self.central_widget)
+        
+        # Create a scroll area for the main content
+        main_scroll_area = QScrollArea()
+        main_scroll_area.setWidgetResizable(True)
+        main_scroll_area.setStyleSheet("border: none; background-color: transparent;")
+        main_scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        main_scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        
+        # Content widget that will hold everything
+        content_widget = QWidget()
+        content_widget.setStyleSheet("background-color: #1f2937; color: white; font-family: Arial, sans-serif;")
+        self.main_layout = QVBoxLayout(content_widget)
         self.main_layout.setContentsMargins(32, 32, 32, 32)
-        self.central_widget.setStyleSheet("background-color: #1f2937; color: white; font-family: Arial, sans-serif;")
+        
+        # Set the content widget to the scroll area
+        main_scroll_area.setWidget(content_widget)
+        
+        # Add scroll area to central widget
+        central_layout = QVBoxLayout(self.central_widget)
+        central_layout.setContentsMargins(0, 0, 0, 0)
+        central_layout.addWidget(main_scroll_area)
         
         # Re-initialize the UI
         self.init_ui()
@@ -2288,12 +2607,81 @@ class EzeeCanteenWindow(QMainWindow):
         # Call the synchronous version to avoid any issues with closed event loops
         self.save_settings_sync(settings)
 
+class DeviceStatusWorker(QRunnable):
+    """Worker thread for checking device/printer status"""
+    
+    class Signals(QObject):
+        finished = pyqtSignal(int, bool, bool)  # index, is_online, is_printer
+        
+    def __init__(self, index, ip, port, is_printer, timeout=0.5):
+        super().__init__()
+        self.index = index
+        self.ip = ip
+        self.port = port
+        self.is_printer = is_printer
+        self.timeout = timeout
+        self.signals = self.Signals()
+        
+    def run(self):
+        try:
+            # Skip check for invalid IPs
+            if not self.ip or self.ip == '123' or not self.is_valid_ip(self.ip):
+                self.signals.finished.emit(self.index, False, self.is_printer)
+                return
+                
+            import socket
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(self.timeout)
+            result = sock.connect_ex((self.ip, int(self.port)))
+            sock.close()
+            is_online = result == 0
+        except Exception as e:
+            print(f"Error checking status for {self.ip}: {e}")
+            is_online = False
+            
+        self.signals.finished.emit(self.index, is_online, self.is_printer)
+    
+    def is_valid_ip(self, ip):
+        """Check if IP address is valid"""
+        try:
+            # Split IP into octets
+            parts = ip.split('.')
+            
+            # Check if we have exactly 4 parts
+            if len(parts) != 4:
+                return False
+                
+            # Check each octet
+            return all(0 <= int(part) <= 255 for part in parts)
+        except (AttributeError, TypeError, ValueError):
+            return False
+
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     
     # Import LicenseManager to check license validity
     from licenseManager import LicenseManager
     
+    # Create a LicenseManager instance
+    license_manager = LicenseManager()
+    
+    # Function to get license data safely
+    async def get_license_data_async():
+        try:
+            return await license_manager.get_license_db()
+        except Exception as e:
+            print(f"Error getting license data: {e}")
+            return None
+            
+    def get_license_data():
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            license_data = loop.run_until_complete(get_license_data_async())
+            return license_data
+        finally:
+            loop.close()
+
     # Create and execute a function to check license validity
     def check_license():
         try:
@@ -2301,8 +2689,7 @@ if __name__ == '__main__':
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             
-            # Check license
-            license_manager = LicenseManager()
+            # Check license            
             result = loop.run_until_complete(license_manager.check_license_validity())
             
             # Close the loop
@@ -2313,13 +2700,19 @@ if __name__ == '__main__':
             print(f"Error checking license: {e}")
             return {'isValid': False, 'message': str(e)}
     
+
     # Check license
     license_result = check_license()
-    
+    print(license_result)
     if license_result.get('isValid', False):
         # License is valid, proceed with main application
         print("License is valid. Opening main application...")
-        window = EzeeCanteenWindow()
+        license_data = get_license_data()
+        if license_data and 'LicenseKey' in license_data:
+            license_key = license_data['LicenseKey']
+
+        print(f"---------------------------------------------License key: {license_key}")
+        window = EzeeCanteenWindow(license_key)
         
         # Check if test_connection command line argument is provided
         if len(sys.argv) > 1 and sys.argv[1] == 'test_db':
@@ -2339,9 +2732,11 @@ if __name__ == '__main__':
         # Open license UI
         license_app = LicenseApp()
         license_app.run()
+
 else:
     # If imported, the main function will just create the window instance
-    def main():
+    def main(license_key):
+        print("HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH")
         # Check license before returning window
         from licenseManager import LicenseManager
         import asyncio
@@ -2355,10 +2750,8 @@ else:
                 # Check license
                 license_manager = LicenseManager()
                 result = loop.run_until_complete(license_manager.check_license_validity())
-                
-                # Close the loop
+                                # Close the loop
                 loop.close()
-                
                 return result
             except Exception as e:
                 print(f"Error checking license: {e}")
@@ -2366,9 +2759,8 @@ else:
         
         # Check license
         license_result = check_license()
-        
         if license_result.get('isValid', False):
-            return EzeeCanteenWindow()
+            return EzeeCanteenWindow(license_key)
         else:
             print(f"License is not valid: {license_result.get('message', 'Unknown error')}. Cannot open main application.")
             return None

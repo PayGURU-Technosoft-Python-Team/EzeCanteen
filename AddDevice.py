@@ -7,6 +7,7 @@ import requests
 from requests.auth import HTTPDigestAuth
 import re
 import socket
+import asyncio
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QLabel, QLineEdit, QPushButton, 
@@ -16,6 +17,8 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QSizePolicy)
 from PyQt5.QtCore import Qt, pyqtSignal, QThread, QTimer
 from PyQt5.QtGui import QFont, QIcon
+from licenseManager import LicenseManager
+
 
 # Database configuration
 DB_HOST = "103.216.211.36"
@@ -306,24 +309,6 @@ class DeviceSelectionDialog(QDialog):
         button_layout.setSpacing(15)
         button_layout.addStretch()
         
-        self.select_all_button = QPushButton("Select All")
-        self.select_all_button.setMinimumHeight(40)
-        self.select_all_button.setStyleSheet("""
-            QPushButton {
-                background-color: #22c55e;
-                color: white;
-                padding: 10px 20px;
-                font-weight: bold;
-                font-size: 13px;
-                border-radius: 6px;
-            }
-            QPushButton:hover {
-                background-color: #16a34a;
-            }
-        """)
-        self.select_all_button.clicked.connect(self.select_all_devices)
-        self.select_all_button.setEnabled(False)
-        
         self.add_selected_button = QPushButton("Add Selected Devices")
         self.add_selected_button.setMinimumHeight(40)
         self.add_selected_button.setStyleSheet("""
@@ -359,7 +344,6 @@ class DeviceSelectionDialog(QDialog):
         """)
         self.close_button.clicked.connect(self.close)
         
-        button_layout.addWidget(self.select_all_button)
         button_layout.addWidget(self.add_selected_button)
         button_layout.addWidget(self.close_button)
         
@@ -382,7 +366,6 @@ class DeviceSelectionDialog(QDialog):
         # Disable scan button and enable progress updates
         self.scan_button.setEnabled(False)
         self.scan_button.setText("Scanning...")
-        self.select_all_button.setEnabled(False)
         self.add_selected_button.setEnabled(False)
         
         # Start scanning thread
@@ -412,16 +395,10 @@ class DeviceSelectionDialog(QDialog):
         self.scan_button.setText("Start Network Scan")
         
         if found_devices:
-            self.select_all_button.setEnabled(True)
             self.add_selected_button.setEnabled(True)
             self.progress_label.setText(f"Scan complete! Found {len(found_devices)} devices.")
         else:
             self.progress_label.setText("Scan complete. No devices found.")
-    
-    def select_all_devices(self):
-        """Select all devices in the list"""
-        for i in range(self.device_list.count()):
-            self.device_list.item(i).setSelected(True)
     
     def add_selected_devices(self):
         """Add selected devices and close dialog"""
@@ -447,7 +424,30 @@ class EzeeCanteenDeviceForm(QMainWindow):
         self.device_type = device_type
         self.edit_mode = edit_device is not None
         self.edit_device = edit_device or {}
+        self.license_key = self.get_license_key()
         self.initUI()
+
+    def get_license_key(self):
+        """Get license key from LicenseManager"""
+        try:
+            # We need to run the async method in a synchronous context
+            def get_license_data():
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    license_manager = LicenseManager()
+                    license_data = loop.run_until_complete(license_manager.get_license_db())
+                    return license_data
+                finally:
+                    loop.close()
+            
+            # Get license data and extract the key
+            license_data = get_license_data()
+            if license_data and 'LicenseKey' in license_data:
+                return license_data['LicenseKey']
+        except Exception as e:
+            print(f"Error getting license key: {str(e)}")
+        return None
 
     def initUI(self):
         from PyQt5.QtWidgets import QScrollArea
@@ -638,6 +638,9 @@ class EzeeCanteenDeviceForm(QMainWindow):
         self.printer_combo.addItem("Select a printer")
         create_form_field("Select Printer", self.printer_combo)
         
+        # Fetch printers from database and populate the dropdown
+        self.fetch_printers_from_db()
+        
         # Enable Device field
         enable_label = QLabel("Enable Device")
         enable_label.setStyleSheet("""
@@ -795,6 +798,82 @@ class EzeeCanteenDeviceForm(QMainWindow):
         if self.edit_mode and self.edit_device:
             self.populate_form()
 
+    def fetch_printers_from_db(self):
+        """Fetch printers from the database and populate the dropdown"""
+        try:
+            conn = self.db_connect()
+            if not conn:
+                return
+                
+            cursor = conn.cursor()
+            
+            # Query to fetch printers from the database
+            sql = """
+            SELECT SrNo, DeviceType, DeviceNumber, IP, Port, DeviceLocation, ComUser,
+                   Enable, DevicePrinterIP 
+            FROM configh 
+            WHERE LicenseKey = %s AND DeviceType != 'Device'
+            ORDER BY DeviceType, DeviceNumber
+            """
+            
+            cursor.execute(sql, (self.license_key,))
+            printers = cursor.fetchall()
+            
+            # Clear existing items
+            self.printer_combo.clear()
+            self.printer_combo.addItem("Select a printer")
+            
+            # Add printers to the dropdown
+            for printer in printers:
+                device_type = printer[1]
+                device_number = printer[2]
+                ip = printer[3]
+                location = printer[5]
+                
+                # Create display name
+                display_name = f"{device_type} {device_number} - {ip}"
+                if location:
+                    display_name += f" ({location})"
+                
+                # Create printer data
+                printer_data = {
+                    'name': f"{device_type} {device_number}",
+                    'ip': ip,
+                    'deviceType': device_type,
+                    'deviceNumber': device_number,
+                    'location': location
+                }
+                
+                # Add to dropdown
+                self.printer_combo.addItem(display_name)
+                self.printer_combo.setItemData(self.printer_combo.count() - 1, printer_data, Qt.UserRole)
+            
+            # If in edit mode, select the current printer
+            if self.edit_mode and self.edit_device:
+                self.select_current_printer()
+                
+        except mysql.connector.Error as err:
+            QMessageBox.warning(self, "Database Warning", f"Failed to fetch printers: {str(err)}")
+        finally:
+            if conn:
+                conn.close()
+    
+    def select_current_printer(self):
+        """Select the current printer in the dropdown if in edit mode"""
+        if not self.edit_device:
+            return
+            
+        printer_ip = self.edit_device.get('printerIP')
+        if not printer_ip:
+            return
+            
+        # Try to find the printer by IP
+        for i in range(1, self.printer_combo.count()):
+            printer_data = self.printer_combo.itemData(i, Qt.UserRole)
+            if printer_data and printer_data.get('ip') == printer_ip:
+                self.printer_combo.setCurrentIndex(i)
+                return
+
     def populate_form(self):
         """Populate form fields with data from the device being edited"""
         # Set basic fields
@@ -905,11 +984,11 @@ class EzeeCanteenDeviceForm(QMainWindow):
             sql = """
             INSERT INTO configh (
                 DeviceType, DeviceNumber, IP, Port, DeviceLocation, ComUser, 
-                comKey, Enable, CreatedDateTime, DevicePrinterIP
+                comKey, Enable, CreatedDateTime, DevicePrinterIP, LicenseKey
             ) VALUES (
                 %s, %s, %s, %s, %s, %s, 
                 AES_ENCRYPT(%s, SHA2(CONCAT('pg2175', %s), 512)), 
-                %s, %s, %s
+                %s, %s, %s, %s
             )
             """
             
@@ -924,7 +1003,8 @@ class EzeeCanteenDeviceForm(QMainWindow):
                 formatted_now,
                 device_data['enable'],
                 formatted_now,
-                None
+                None,
+                self.license_key
             )
             
             cursor.execute(sql, values)
@@ -940,7 +1020,8 @@ class EzeeCanteenDeviceForm(QMainWindow):
                 "location": device_data['location'],
                 "printerIP": None,
                 "enable": device_data['enable'],
-                "printerName": None
+                "printerName": None,
+                "licenseKey": self.license_key
             }
             self.device_saved.emit(new_device)
             
@@ -953,32 +1034,10 @@ class EzeeCanteenDeviceForm(QMainWindow):
                 conn.close()
     
     def populate_printers(self, printers):
-        """Populate printer dropdown with available printers"""
-        self.printer_combo.clear()
-        self.printer_combo.addItem("Select a printer")
-        
-        for printer in printers:
-            printer_name = printer.get('name', 'Unknown')
-            self.printer_combo.addItem(printer_name)
-            
-        # If in edit mode, select the current printer
-        if self.edit_mode and self.edit_device and printers:
-            printer_ip = self.edit_device.get('printerIP', '')
-            printer_name = self.edit_device.get('printerName', '')
-            
-            # First try to match by name
-            if printer_name:
-                index = self.printer_combo.findText(printer_name)
-                if index >= 0:
-                    self.printer_combo.setCurrentIndex(index)
-                    return
-            
-            # If no match by name, try IP
-            if printer_ip:
-                for i, printer in enumerate(printers):
-                    if printer.get('ip') == printer_ip:
-                        self.printer_combo.setCurrentIndex(i + 1)  # +1 because of "Select a printer"
-                        return
+        """Populate printer dropdown with available printers (legacy method)"""
+        # This method is kept for backward compatibility
+        # The fetch_printers_from_db method is now used to populate the dropdown
+        pass
     
     def db_connect(self):
         """Connect to MySQL database"""
@@ -1006,44 +1065,21 @@ class EzeeCanteenDeviceForm(QMainWindow):
             return 1
     
     def get_printer_ip(self, printer_name):
-        """Get printer IP address from database by printer name"""
+        """Get printer IP address from selected printer in dropdown"""
         if not printer_name or printer_name == "Select a printer":
             return None
             
-        try:
-            conn = self.db_connect()
-            if not conn:
-                return None
-                
-            cursor = conn.cursor()
-            
-            # First try to fetch by exact printer name
-            sql = "SELECT IP FROM configh WHERE DeviceType = %s"
-            cursor.execute(sql, (printer_name,))
-            result = cursor.fetchone()
-            
-            if result:
-                return result[0]
-                
-            # If not found, try parsing for a printer number
-            try:
-                printer_num = int(printer_name.split()[-1])
-                sql = "SELECT IP FROM configh WHERE DeviceType = 'Printer' AND DeviceNumber = %s"
-                cursor.execute(sql, (printer_num,))
-                result = cursor.fetchone()
-                
-                if result:
-                    return result[0]
-            except (ValueError, IndexError):
-                pass
-                
+        # Get selected index
+        selected_index = self.printer_combo.currentIndex()
+        if selected_index <= 0:  # No printer selected
             return None
-        except mysql.connector.Error as err:
-            QMessageBox.warning(self, "Database Warning", f"Failed to fetch printer IP: {str(err)}")
-            return None
-        finally:
-            if conn:
-                conn.close()
+            
+        # Get printer data from the dropdown
+        printer_data = self.printer_combo.itemData(selected_index, Qt.UserRole)
+        if printer_data and 'ip' in printer_data:
+            return printer_data['ip']
+            
+        return None
     
     def save_device(self):
         """Save the device information to the database and emit signal"""
@@ -1070,9 +1106,14 @@ class EzeeCanteenDeviceForm(QMainWindow):
         # Get selected printer
         selected_printer = None
         printer_ip = None
-        if self.printer_combo.currentIndex() > 0:
+        selected_index = self.printer_combo.currentIndex()
+        if selected_index > 0:
             selected_printer = self.printer_combo.currentText()
-            printer_ip = self.get_printer_ip(selected_printer)
+            printer_data = self.printer_combo.itemData(selected_index, Qt.UserRole)
+            if printer_data and 'ip' in printer_data:
+                printer_ip = printer_data['ip']
+                # Use the printer name from the data
+                selected_printer = printer_data.get('name', selected_printer)
         
         try:
             conn = self.db_connect()
@@ -1094,10 +1135,22 @@ class EzeeCanteenDeviceForm(QMainWindow):
                 
                 # If password is empty in edit mode, don't update it
                 if password:
-                    # Update with password
-                    now = datetime.now()
-                    formatted_now = now.strftime('%Y-%m-%d %H:%M:%S')
+                    # First get the original CreatedDateTime for proper encryption
+                    get_created_datetime_sql = """
+                    SELECT CreatedDateTime FROM configh 
+                    WHERE DeviceType = %s AND DeviceNumber = %s
+                    """
+                    cursor.execute(get_created_datetime_sql, (device_type, device_number))
+                    result = cursor.fetchone()
                     
+                    if not result or not result[0]:
+                        # Fallback to current time if original time not found
+                        creation_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    else:
+                        # Use original creation time for encryption
+                        creation_time = result[0].strftime('%Y-%m-%d %H:%M:%S') if hasattr(result[0], 'strftime') else str(result[0])
+                    
+                    # Update with password
                     sql = """
                     UPDATE configh SET
                         IP = %s,
@@ -1106,7 +1159,8 @@ class EzeeCanteenDeviceForm(QMainWindow):
                         ComUser = %s,
                         comKey = AES_ENCRYPT(%s, SHA2(CONCAT('pg2175', %s), 512)),
                         Enable = %s,
-                        DevicePrinterIP = %s
+                        DevicePrinterIP = %s,
+                        LicenseKey = %s
                     WHERE DeviceType = %s AND DeviceNumber = %s
                     """
                     
@@ -1116,9 +1170,10 @@ class EzeeCanteenDeviceForm(QMainWindow):
                         location,
                         username,
                         password,
-                        formatted_now,  # Timestamp for encryption
+                        creation_time,  # Use original creation time for encryption
                         enable_value,
                         printer_ip,
+                        self.license_key,
                         device_type,
                         device_number
                     )
@@ -1131,7 +1186,8 @@ class EzeeCanteenDeviceForm(QMainWindow):
                         DeviceLocation = %s, 
                         ComUser = %s,
                         Enable = %s,
-                        DevicePrinterIP = %s
+                        DevicePrinterIP = %s,
+                        LicenseKey = %s
                     WHERE DeviceType = %s AND DeviceNumber = %s
                     """
                     
@@ -1142,6 +1198,7 @@ class EzeeCanteenDeviceForm(QMainWindow):
                         username,
                         enable_value,
                         printer_ip,
+                        self.license_key,
                         device_type,
                         device_number
                     )
@@ -1161,11 +1218,11 @@ class EzeeCanteenDeviceForm(QMainWindow):
                 sql = """
                 INSERT INTO configh (
                     DeviceType, DeviceNumber, IP, Port, DeviceLocation, ComUser, 
-                    comKey, Enable, CreatedDateTime, DevicePrinterIP
+                    comKey, Enable, CreatedDateTime, DevicePrinterIP, LicenseKey
                 ) VALUES (
                     %s, %s, %s, %s, %s, %s, 
                     AES_ENCRYPT(%s, SHA2(CONCAT('pg2175', %s), 512)), 
-                    %s, %s, %s
+                    %s, %s, %s, %s
                 )
                 """
                 
@@ -1181,7 +1238,8 @@ class EzeeCanteenDeviceForm(QMainWindow):
                     formatted_now,  # Pass timestamp for encryption
                     enable_value,
                     formatted_now,  # CreatedDateTime field
-                    printer_ip      # This will be None if no printer selected
+                    printer_ip,     # This will be None if no printer selected
+                    self.license_key # Add license key
                 )
                 
                 cursor.execute(sql, values)
@@ -1201,6 +1259,7 @@ class EzeeCanteenDeviceForm(QMainWindow):
                 "printerIP": printer_ip,
                 "enable": enable_value,
                 "printerName": selected_printer,
+                "licenseKey": self.license_key,
                 # For backward compatibility, set name for Printer type
                 "name": f"{device_type} {device_number}" if device_type == "Printer" else None
             }
@@ -1252,7 +1311,8 @@ class EzeeCanteenDeviceForm(QMainWindow):
                 "showLiveE": new_device["enable"] == "Y",
                 "showLiveD": new_device["enable"] != "Y",
                 "deviceType": device_type,
-                "deviceNumber": new_device["deviceNumber"]
+                "deviceNumber": new_device["deviceNumber"],
+                "licenseKey": new_device.get("licenseKey")
             }
             
             # Handle edit mode - find and update existing device
@@ -1320,6 +1380,37 @@ class EzeeCanteenDeviceForm(QMainWindow):
         if reply == QMessageBox.Yes:
             self.save_device()
         # Parent class will handle the navigation back
+        
+    def update_hikvision_passwords(self, password):
+        """Update passwords for all Hikvision devices using proper encryption"""
+        try:
+            conn = self.db_connect()
+            if not conn:
+                return False
+                
+            cursor = conn.cursor()
+            
+            # Update Hikvision device passwords
+            sql = """
+            UPDATE configh 
+            SET comKey = AES_ENCRYPT(%s, SHA2(CONCAT('pg2175', CreatedDateTime), 512)) 
+            WHERE LCASE(DeviceType) = 'hikvision'
+            """
+            
+            cursor.execute(sql, (password,))
+            rows_affected = cursor.rowcount
+            conn.commit()
+            
+            QMessageBox.information(self, "Password Update", 
+                f"Updated passwords for {rows_affected} Hikvision devices.")
+            
+            return True
+        except mysql.connector.Error as err:
+            QMessageBox.critical(self, "Database Error", f"Failed to update Hikvision passwords: {str(err)}")
+            return False
+        finally:
+            if conn:
+                conn.close()
 
 
 if __name__ == '__main__':

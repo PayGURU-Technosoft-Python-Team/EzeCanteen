@@ -82,7 +82,7 @@ def print_slip(ip, port, CouponCount, header, CouponType, id, name, punchTime, s
 # Example usage:
 if __name__ == "__main__":
     # Define parameters
-    printer_ip = "192.168.0.251"  # Replace with your printer's IP
+    printer_ip = "192.168.1.2"  # Replace with your printer's IP
     printer_port = 9100  # Common port for printer communication
     
     # Example data

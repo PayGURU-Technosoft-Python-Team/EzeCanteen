@@ -14,7 +14,7 @@ import logging
 import xmltodict
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QGridLayout, 
                              QLabel, QPushButton, QVBoxLayout, QHBoxLayout, QFrame,
-                             QScrollArea)
+                             QScrollArea, QProgressBar)
 from PyQt5.QtCore import Qt, QTimer, QSize, pyqtSignal, QObject, QThread, QFile
 from PyQt5.QtGui import QFont, QIcon, QPixmap, QColor, QLinearGradient, QBrush, QPalette
 from PyQt5.QtWidgets import QGraphicsDropShadowEffect, QSizePolicy
@@ -22,6 +22,8 @@ import urllib.request
 from io import BytesIO
 from print import print_slip  # Import print_slip function
 from PyQt5 import sip
+from licenseManager import LicenseManager
+import asyncio
 
 # Default device configuration (will be used if DB fetch fails)
 IP = "192.168.0.85"
@@ -39,6 +41,9 @@ DB_TABLE = "sequentiallog"
 
 # Dictionary to store device configurations and their associated printers
 DEVICES = {}
+
+# Global flag to track if configs have been refreshed
+CONFIG_REFRESHED = False
 
 # Function to modify user begin time
 def modify_user_begin_time(base_url, username, password, employee_no, begin_time, employee_name=None):
@@ -87,12 +92,23 @@ def modify_user_begin_time(base_url, username, password, employee_no, begin_time
         return {"error": str(e)}
 
 # Function to fetch device configurations from the database
-def fetch_device_config():
+def fetch_device_config(force_refresh=False):
     """Fetch device configurations from the database"""
-    global DEVICES, IP, PORT, USERNAME, PASSWORD
+    global DEVICES, IP, PORT, USERNAME, PASSWORD, CONFIG_REFRESHED
+    
+    # If already refreshed and not forcing refresh, skip
+    if CONFIG_REFRESHED and not force_refresh:
+        logging.info("Using cached device configurations")
+        return
+    
+    # Clear existing device configurations if refreshing
+    if force_refresh and DEVICES:
+        logging.info("Forcing refresh of device configurations")
+        DEVICES.clear()
     
     try:
         # Connect to the database
+        logging.info(f"Connecting to database at {DB_HOST}:{DB_PORT}")
         conn = mysql.connector.connect(
             host=DB_HOST,
             user=DB_USER,
@@ -111,15 +127,17 @@ def fetch_device_config():
             Enable, DevicePrinterIP, DeviceName,
             AES_DECRYPT(comKey, SHA2(CONCAT('pg2175', CreatedDateTime), 512)) as Pwd
         FROM configh
-        WHERE Enable = 'Y'
+        WHERE Enable = 'Y' 
         ORDER BY DeviceType, DeviceNumber
         """
         
+        logging.info("Executing database query for device configuration")
         cursor.execute(sql)
         results = cursor.fetchall()
         
         if not results:
             logging.warning("No enabled devices found in database, using default values")
+            CONFIG_REFRESHED = True
             return
         
         # Create a dictionary to map printer IPs to their details
@@ -148,16 +166,20 @@ def fetch_device_config():
                 if device.get('Pwd') is not None:
                     try:
                         # Convert bytes to string if needed
-                        if isinstance(device['Pwd'], bytes):
+                        if isinstance(device['Pwd'], (bytes, bytearray)):
                             device_pwd = device['Pwd'].decode('utf-8')
                         else:
                             device_pwd = str(device['Pwd'])
+
                     except Exception as e:
                         logging.error(f"Error decoding password for device {device_ip}: {e}")
                         device_pwd = PASSWORD  # Use default if decoding fails
                 else:
+                    print("3")
                     device_pwd = PASSWORD  # Use default if no password
                 
+                print("___________________")
+                print(device_pwd)
                 # Find associated printer from DevicePrinterIP
                 printer_ip = device.get('DevicePrinterIP', '')
                 
@@ -215,6 +237,10 @@ def fetch_device_config():
         cursor.close()
         conn.close()
         
+        # Mark as refreshed
+        CONFIG_REFRESHED = True
+        logging.info(f"Device configurations refreshed successfully - {len(DEVICES)} devices loaded")
+        
     except mysql.connector.Error as err:
         logging.error(f"Database error while fetching device configurations: {err}")
         print(f"Error fetching device configurations: {err}")
@@ -224,7 +250,7 @@ def fetch_device_config():
         print(f"Unexpected error: {e}")
         print("Using default device configuration")
 
-# Load device configuration from database
+# Load device configuration from database (initial load)
 fetch_device_config()
 
 # Create temp directory for images
@@ -349,6 +375,7 @@ class TimeDisplay(QLabel):
 
 class AuthEventMonitor(QThread):
     def __init__(self, communicator, device_ip=None):
+        """Initialize AuthEventMonitor with comprehensive error handling"""
         super().__init__()
         self.communicator = communicator
         self.running = True
@@ -358,44 +385,20 @@ class AuthEventMonitor(QThread):
         self.max_consecutive_errors = 5  # Maximum allowed consecutive errors
         self.last_successful_fetch = datetime.now()  # Track when we last successfully fetched events
         
+        # Initialize meal_schedule and related variables to prevent AttributeError
+        self.meal_schedule = []
+        self.app_settings = {}
+        self.from_time_str = ''
+        self.to_time_str = ''
+        self.config_error = None  # Store configuration error for UI display
+        self.last_error_shown = None  # Track when we last showed an error message
+        
         # Read appSettings.json to get fromTime and toTime
-        try:
-            with open('appSettings.json', 'r') as f:
-                self.app_settings = json.load(f)
-            
-            # Get meal schedule
-            self.meal_schedule = self.app_settings.get('CanteenMenu', {}).get('MealSchedule', [])
-            if self.meal_schedule:
-                self.from_time_str = self.meal_schedule[0].get('fromTime', '')
-                self.to_time_str = self.meal_schedule[0].get('toTime', '')
-                logging.info(f"Meal schedule configured: {self.from_time_str} to {self.to_time_str}")
-            else:
-                self.from_time_str = ''
-                self.to_time_str = ''
-                logging.warning("No meal schedule found in app settings")
-        except Exception as e:
-            logging.error(f"Error reading appSettings.json: {e}")
-            self.from_time_str = ''
-            self.to_time_str = ''
+        self._load_app_settings()
         
         # Get device configuration
         self.device_ip = device_ip
-        
-        if device_ip and device_ip in DEVICES:
-            # Use the specified device configuration
-            device_config = DEVICES[device_ip]['device']
-            self.ip = device_config['ip']
-            self.port = device_config['port']
-            self.username = device_config['user']
-            self.password = device_config['password']
-            logging.info(f"AuthEventMonitor using device: {self.ip}:{self.port}")
-        else:
-            # Use the global configuration (default device)
-            self.ip = IP
-            self.port = PORT
-            self.username = USERNAME
-            self.password = PASSWORD
-            logging.info(f"AuthEventMonitor using default device: {self.ip}:{self.port}")
+        self._setup_device_configuration()
         
         # URL for access control events
         self.url = f"http://{self.ip}:{self.port}/ISAPI/AccessControl/AcsEvent?format=json"
@@ -409,7 +412,196 @@ class AuthEventMonitor(QThread):
         self.watchdog_timer = QTimer()
         self.watchdog_timer.timeout.connect(self.check_watchdog)
         self.watchdog_timer.start(60000)  # Check every minute
-    
+
+    def _load_app_settings(self):
+        """Load application settings from appSettings.json with comprehensive error handling"""
+        try:
+            with open('appSettings.json', 'r', encoding='utf-8') as f:
+                self.app_settings = json.load(f)
+            
+            # Get meal schedule
+            canteen_menu = self.app_settings.get('CanteenMenu', {})
+            self.meal_schedule = canteen_menu.get('MealSchedule', [])
+            
+            if self.meal_schedule and len(self.meal_schedule) > 0:
+                # Get first meal schedule entry
+                first_meal = self.meal_schedule[0]
+                self.from_time_str = first_meal.get('fromTime', '')
+                self.to_time_str = first_meal.get('toTime', '')
+                
+                logging.info(f"Meal schedule configured: {self.from_time_str} to {self.to_time_str}")
+                logging.info(f"Total meal schedules loaded: {len(self.meal_schedule)}")
+                
+                # Log all meal schedules for debugging
+                for i, meal in enumerate(self.meal_schedule):
+                    meal_name = meal.get('mealName', f'Meal {i+1}')
+                    from_time = meal.get('fromTime', 'N/A')
+                    to_time = meal.get('toTime', 'N/A')
+                    logging.info(f"  {meal_name}: {from_time} - {to_time}")
+                    
+            else:
+                self.config_error = "No meal schedule found in app settings"
+                logging.warning(self.config_error)
+                # Use QTimer to emit signal after UI is ready
+                QTimer.singleShot(1000, lambda: self._emit_config_warning(self.config_error))
+                
+        except FileNotFoundError:
+            self.config_error = "appSettings.json file not found. Application will run with default configuration (always active)."
+            logging.error(self.config_error)
+            # Use QTimer to emit signal after UI is ready
+            QTimer.singleShot(1000, lambda: self._emit_config_error("Configuration File Missing", self.config_error))
+            
+        except json.JSONDecodeError as e:
+            self.config_error = f"Invalid JSON format in appSettings.json: {str(e)}"
+            logging.error(self.config_error)
+            # Use QTimer to emit signal after UI is ready
+            QTimer.singleShot(1000, lambda: self._emit_config_error("Invalid Configuration", self.config_error))
+            
+        except PermissionError:
+            self.config_error = "Permission denied reading appSettings.json. Check file permissions."
+            logging.error(self.config_error)
+            # Use QTimer to emit signal after UI is ready
+            QTimer.singleShot(1000, lambda: self._emit_config_error("Permission Error", self.config_error))
+            
+        except UnicodeDecodeError as e:
+            self.config_error = f"Encoding error reading appSettings.json: {str(e)}. Ensure file is UTF-8 encoded."
+            logging.error(self.config_error)
+            # Use QTimer to emit signal after UI is ready
+            QTimer.singleShot(1000, lambda: self._emit_config_error("Encoding Error", self.config_error))
+            
+        except Exception as e:
+            self.config_error = f"Unexpected error reading appSettings.json: {str(e)}"
+            logging.error(self.config_error)
+            # Use QTimer to emit signal after UI is ready
+            QTimer.singleShot(1000, lambda: self._emit_config_error("Configuration Error", self.config_error))
+
+    def _emit_config_error(self, title, message):
+        """Emit configuration error signal safely"""
+        try:
+            if hasattr(self.communicator, 'show_error_message'):
+                self.communicator.show_error_message.emit(title, message)
+            else:
+                logging.warning("Communicator does not have show_error_message signal")
+        except Exception as e:
+            logging.error(f"Error emitting config error signal: {e}")
+
+    def _emit_config_warning(self, message):
+        """Emit configuration warning signal safely"""
+        try:
+            if hasattr(self.communicator, 'show_error_message'):
+                self.communicator.show_error_message.emit("Configuration Warning", message)
+            else:
+                logging.warning("Communicator does not have show_error_message signal")
+        except Exception as e:
+            logging.error(f"Error emitting config warning signal: {e}")
+
+    def _setup_device_configuration(self):
+        """Setup device configuration with error handling"""
+        try:
+            if self.device_ip and self.device_ip in DEVICES:
+                # Use the specified device configuration
+                device_config = DEVICES[self.device_ip]['device']
+                # print("##################")
+                # print(device_config)
+                self.ip = device_config['ip']
+                self.port = device_config['port']
+                self.username = device_config['user']
+                self.password = device_config['password']
+                logging.info(f"AuthEventMonitor using device: {self.ip}:{self.port}")
+            else:
+                # Use the global configuration (default device)
+                self.ip = IP
+                self.port = PORT
+                self.username = USERNAME
+                self.password = PASSWORD
+                logging.info(f"AuthEventMonitor using default device: {self.ip}:{self.port}")
+                
+            # Validate configuration
+            if not all([self.ip, self.port, self.username, self.password]):
+                error_msg = "Incomplete device configuration. Missing IP, port, username, or password."
+                logging.error(error_msg)
+                QTimer.singleShot(1000, lambda: self._emit_config_error("Device Configuration Error", error_msg))
+                
+        except Exception as e:
+            error_msg = f"Error setting up device configuration: {str(e)}"
+            logging.error(error_msg)
+            QTimer.singleShot(1000, lambda: self._emit_config_error("Device Setup Error", error_msg))
+
+    def check_time_range(self):
+        """Check if current time is within the specified meal time range"""
+        try:
+            # Check if meal_schedule exists and is not empty
+            if not hasattr(self, 'meal_schedule') or not self.meal_schedule:
+                # If no meal schedule specified or configuration error, always proceed
+                if hasattr(self, 'config_error') and self.config_error:
+                    # Show configuration error in UI periodically (but not too frequently)
+                    current_time = datetime.now()
+                    if not hasattr(self, 'last_error_shown') or (current_time - self.last_error_shown).total_seconds() > 300:  # Show every 5 minutes
+                        self.communicator.show_status_message.emit(f"Configuration Issue: {self.config_error}")
+                        self.last_error_shown = current_time
+                return True
+            
+            current_time = datetime.now().strftime('%H:%M')
+            
+            # Check all meal schedule entries
+            for meal in self.meal_schedule:
+                from_time = meal.get('fromTime', '')
+                to_time = meal.get('toTime', '')
+                
+                if from_time and to_time and from_time <= current_time <= to_time:
+                    return True
+            
+            return False
+            
+        except Exception as e:
+            error_msg = f"Error checking time range: {str(e)}"
+            logging.error(error_msg)
+            # Show error in UI
+            self.communicator.show_error_message.emit("Time Check Error", error_msg)
+            # Return True to allow operation to continue despite error
+            return True
+
+    def run(self):
+        """Main monitoring loop with comprehensive error handling"""
+        while self.running:
+            try:
+                # Check time range with error handling
+                try:
+                    current_in_meal_time = self.check_time_range()
+                except Exception as e:
+                    error_msg = f"Error in time range check: {str(e)}"
+                    logging.error(error_msg)
+                    self.communicator.show_error_message.emit("Time Check Error", error_msg)
+                    current_in_meal_time = True  # Default to allowing operation
+                
+                if not current_in_meal_time:
+                    # Not in meal time, wait and continue
+                    time.sleep(5)
+                    continue
+                
+                # Rest of your monitoring logic here...
+                # (Add your existing event monitoring code)
+                
+            except Exception as e:
+                error_msg = f"Critical error in monitoring loop: {str(e)}"
+                logging.error(error_msg)
+                self.communicator.show_error_message.emit("Monitor Error", error_msg)
+                
+                # Increment error counter
+                self.consecutive_errors += 1
+                
+                if self.consecutive_errors >= self.max_consecutive_errors:
+                    error_msg = f"Too many consecutive errors ({self.consecutive_errors}). Stopping monitor."
+                    logging.error(error_msg)
+                    self.communicator.show_error_message.emit("Monitor Stopped", error_msg)
+                    break
+                
+                # Wait before retrying
+                time.sleep(10)
+                
+            except KeyboardInterrupt:
+                logging.info("Monitor stopped by user")
+                break    
     def check_time_range(self):
         """Check if current time is within the specified meal time range"""
         if not self.meal_schedule:
@@ -446,22 +638,23 @@ class AuthEventMonitor(QThread):
     
     def retry_connection(self):
         """Retry establishing connection with exponential backoff"""
+        print("Retrying connection")
         # Reset the URL just in case
-        self.url = f"http://{self.ip}:{self.port}/ISAPI/AccessControl/AcsEvent?format=json"
+        # self.url = f"http://{self.ip}:{self.port}/ISAPI/AccessControl/AcsEvent?format=json"
         
-        # Log the retry
-        logging.info(f"Retrying connection to {self.url}")
+        # # Log the retry
+        # logging.info(f"Retrying connection to {self.url}")
         
-        # Refresh credentials from DEVICES if needed
-        if self.device_ip and self.device_ip in DEVICES:
-            device_config = DEVICES[self.device_ip]['device']
-            self.ip = device_config['ip']
-            self.port = device_config['port']
-            self.username = device_config['user']
-            self.password = device_config['password']
-            # Update URL with fresh credentials
-            self.url = f"http://{self.ip}:{self.port}/ISAPI/AccessControl/AcsEvent?format=json"
-            logging.info(f"Updated device credentials for retry: {self.ip}:{self.port}")
+        # # Refresh credentials from DEVICES if needed
+        # if self.device_ip and self.device_ip in DEVICES:
+        #     device_config = DEVICES[self.device_ip]['device']
+        #     self.ip = device_config['ip']
+        #     self.port = device_config['port']
+        #     self.username = device_config['user']
+        #     self.password = device_config['password']
+        #     # Update URL with fresh credentials
+        #     self.url = f"http://{self.ip}:{self.port}/ISAPI/AccessControl/AcsEvent?format=json"
+        #     logging.info(f"Updated device credentials for retry: {self.ip}:{self.port}")
     
     def run(self):
         """Main monitoring loop"""
@@ -521,6 +714,11 @@ class AuthEventMonitor(QThread):
                     }
                     
                     # Make the request with increased timeout
+                    print("2222222222222")
+                    # self.password = self.password.decode('utf-8')
+                    # self.password = "a1234@4321"
+                    print({self.username})
+                    print({self.password})
                     response = requests.post(
                         self.url,
                         json=payload,
@@ -528,7 +726,6 @@ class AuthEventMonitor(QThread):
                         timeout=30,  # Increased timeout from 15 to 30 seconds
                         headers={'Content-Type': 'application/json'}
                     )
-                    
                     # Process successful responses
                     if response.status_code == 200:
                         # Reset consecutive errors on success
@@ -962,18 +1159,27 @@ class EzeeCanteen(QMainWindow):
         self.current_date = datetime.now().date()  # Track date for token counter reset
         self.settings_mode = False  # Flag to indicate if we're in settings mode
         self.parent_window = None  # Reference to parent window if in settings mode
+        self.resized = False  # Initialize the resized attribute
         
-        # Store device configurations
+        # Store device configurations - always initialize these to avoid attribute errors
         self.active_devices = {}  # Will store device IP -> monitor thread mapping
         self.device_printers = {}  # Will store device IP -> printer details mapping
         
+        # Initialize UI first so it appears quickly
         self.init_ui()
         
+        # Set default printer state to avoid errors
+        self.printer_available = False
+        self.db_available = False
+        
+        # Use a timer to delay the initialization of the rest of the components
+        # This allows the UI to render first before doing network operations
+        QTimer.singleShot(100, self.delayed_initialization)
+    
+    def delayed_initialization(self):
+        """Perform heavy initialization tasks after UI is rendered"""
         # Test database connection
         self.test_db_connection()
-        
-        # Connect resize event to refresh grid
-        self.resized = False
         
         # Initialize devices and start monitors
         self.initialize_devices()
@@ -989,6 +1195,11 @@ class EzeeCanteen(QMainWindow):
         self.events = []
         self.clear_grid()
         
+        # Ensure active_devices is initialized
+        if not hasattr(self, 'active_devices'):
+            logging.info("Re-initializing active_devices dictionary")
+            self.active_devices = {}
+        
         if not DEVICES:
             # If no devices were configured, use a single monitor with default settings
             logging.warning("No devices configured. Using default device configuration.")
@@ -997,59 +1208,108 @@ class EzeeCanteen(QMainWindow):
             
         logging.info(f"Initializing {len(DEVICES)} authentication devices")
         
-        # Start a monitor for each configured device
+        # Create a worker thread to fetch device details
+        class DeviceInitWorker(QThread):
+            def __init__(self, parent, devices):
+                super().__init__(parent)
+                self.devices = devices
+                self.device_info = {}
+                
+            def run(self):
+                for device_ip, config in self.devices.items():
+                    try:
+                        # Get device details
+                        device_config = config['device']
+                        printer_config = config['printer']
+                        
+                        # Get device serial and MAC
+                        device_serial, device_mac = getDeviceDetails(
+                            device_config['ip'], 
+                            device_config['port'], 
+                            device_config['user'], 
+                            device_config['password']
+                        )
+                        
+                        # Store result
+                        self.device_info[device_ip] = {
+                            'device_config': device_config,
+                            'printer_config': printer_config,
+                            'serial': device_serial,
+                            'mac': device_mac
+                        }
+                        
+                    except Exception as e:
+                        logging.error(f"Error initializing device {device_ip}: {e}")
+        
+        # Start basic initialization without waiting for network operations
         for device_ip, config in DEVICES.items():
-            try:
-                # Get device details
-                device_config = config['device']
-                printer_config = config['printer']
-                
-                # Store printer configuration for this device
-                self.device_printers[device_ip] = {
-                    'ip': printer_config['ip'],
-                    'port': printer_config.get('port', 9100),
-                    'name': printer_config.get('name', 'CITIZEN'),
-                    'available': False  # Will be set by test_printer_connections
-                }
-                
-                # Log the device-to-printer mapping
-                logging.info(f"Device {device_ip} mapped to printer {printer_config['ip']}:{printer_config.get('port', 9100)}")
-                
-                # Get device serial and MAC
-                device_serial, device_mac = getDeviceDetails(
-                    device_config['ip'], 
-                    device_config['port'], 
-                    device_config['user'], 
-                    device_config['password']
-                )
-                
-                # Store the device serial for the first device (for backward compatibility)
-                if not hasattr(self, 'device_serial'):
-                    self.device_serial = device_serial
-                    self.device_mac = device_mac
-                
-                # Start authentication event monitor for this device
-                auth_monitor = AuthEventMonitor(self.communicator, device_ip)
-                auth_monitor.start()
-                
-                # Store monitor in active devices
-                self.active_devices[device_ip] = {
-                    'monitor': auth_monitor,
-                    'serial': device_serial,
-                    'mac': device_mac
-                }
-                
-                logging.info(f"Started monitor for device {device_ip}:{device_config['port']} with serial {device_serial}")
-                
-            except Exception as e:
-                logging.error(f"Error initializing device {device_ip}: {e}")
+            # Get basic device details
+            device_config = config['device']
+            printer_config = config['printer']
+            
+            # Store printer configuration for this device without checking connectivity yet
+            self.device_printers[device_ip] = {
+                'ip': printer_config['ip'],
+                'port': printer_config.get('port', 9100),
+                'name': printer_config.get('name', 'CITIZEN'),
+                'available': False  # Will be updated later
+            }
+            
+            # Log the device-to-printer mapping
+            logging.info(f"Device {device_ip} mapped to printer {printer_config['ip']}:{printer_config.get('port', 9100)}")
         
         # Connect the signal to handle authentication events
-        # We'll determine which device generated the event when handling it
         self.communicator.new_auth_event.connect(self.add_auth_event)
         
-        # Test printer connections
-        self.test_printer_connections()
+        # Start a worker thread to initialize device details
+        self.device_init_worker = DeviceInitWorker(self, DEVICES)
+        self.device_init_worker.finished.connect(self.on_device_init_finished)
+        self.device_init_worker.start()
+        
+        # Test printer connections in the background
+        QTimer.singleShot(500, self.test_printer_connections)
+
+    def on_device_init_finished(self):
+        """Called when device initialization completes"""
+        # Process the results from the worker thread
+        worker = self.device_init_worker
+        
+        # Check if device_info exists and has items
+        if not hasattr(worker, 'device_info') or not worker.device_info:
+            logging.warning("No device information available from worker thread")
+            return
+        
+        # Initialize active_devices if it doesn't exist
+        if not hasattr(self, 'active_devices'):
+            logging.info("Initializing active_devices dictionary")
+            self.active_devices = {}
+            
+        # Process each device
+        for device_ip, info in worker.device_info.items():
+            device_config = info['device_config']
+            device_serial = info['serial']
+            device_mac = info['mac']
+            
+            # Store the device serial for the first device (for backward compatibility)
+            if not hasattr(self, 'device_serial'):
+                self.device_serial = device_serial
+                self.device_mac = device_mac
+            
+            # Start authentication event monitor for this device
+            auth_monitor = AuthEventMonitor(self.communicator, device_ip)
+            auth_monitor.start()
+            
+            # Store monitor in active devices
+            self.active_devices[device_ip] = {
+                'monitor': auth_monitor,
+                'serial': device_serial,
+                'mac': device_mac
+            }
+            
+            logging.info(f"Started monitor for device {device_ip}:{device_config['port']} with serial {device_serial}")
+        
+        # Clean up
+        self.device_init_worker = None
 
     def setup_single_device_monitor(self):
         """Set up a single device monitor using default configuration"""
@@ -1143,54 +1403,135 @@ class EzeeCanteen(QMainWindow):
     
     def test_printer_connections(self):
         """Test all configured printer connections"""
-        if not self.device_printers:
-            # Legacy mode - test the single printer
-            self.test_printer_connection()
-            return
+        # Create a worker thread to test printer connections
+        class PrinterTestWorker(QThread):
+            def __init__(self, parent, device_printers=None, legacy_ip=None, legacy_port=None):
+                super().__init__(parent)
+                self.device_printers = device_printers
+                self.legacy_ip = legacy_ip
+                self.legacy_port = legacy_port
+                self.results = {}
+                self.legacy_result = False
+                
+            def run(self):
+                if not self.device_printers:
+                    # Legacy mode - test the single printer
+                    self.legacy_result = self.test_single_printer(self.legacy_ip, self.legacy_port)
+                    return
+                    
+                # Get unique printer IPs to avoid testing the same printer multiple times
+                unique_printers = {}
+                for device_ip, printer in self.device_printers.items():
+                    printer_key = f"{printer['ip']}:{printer['port']}"
+                    if printer_key not in unique_printers:
+                        unique_printers[printer_key] = {
+                            'ip': printer['ip'],
+                            'port': printer['port'],
+                            'devices': []
+                        }
+                    unique_printers[printer_key]['devices'].append(device_ip)
+                
+                # Test each unique printer
+                logging.info(f"Testing {len(unique_printers)} unique printer connections")
+                for printer_key, printer_info in unique_printers.items():
+                    try:
+                        # Check printer connection with short timeout
+                        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                        s.settimeout(0.5)  # 0.5 second timeout for faster checks
+                        result = s.connect_ex((printer_info['ip'], printer_info['port']))
+                        s.close()
+                        
+                        available = (result == 0)
+                        
+                        # Store result for each device using this printer
+                        for device_ip in printer_info['devices']:
+                            self.results[device_ip] = available
+                        
+                        if available:
+                            logging.info(f"Printer {printer_info['ip']}:{printer_info['port']} connection successful (for {len(printer_info['devices'])} devices)")
+                        else:
+                            logging.warning(f"Printer {printer_info['ip']}:{printer_info['port']} connection failed (for {len(printer_info['devices'])} devices)")
+                    except Exception as e:
+                        # Handle socket errors gracefully
+                        logging.error(f"Error testing printer {printer_info['ip']}:{printer_info['port']}: {e}")
+                        for device_ip in printer_info['devices']:
+                            self.results[device_ip] = False
             
-        # Get unique printer IPs to avoid testing the same printer multiple times
-        unique_printers = {}
-        for device_ip, printer in self.device_printers.items():
-            printer_key = f"{printer['ip']}:{printer['port']}"
-            if printer_key not in unique_printers:
-                unique_printers[printer_key] = {
-                    'ip': printer['ip'],
-                    'port': printer['port'],
-                    'devices': []
-                }
-            unique_printers[printer_key]['devices'].append(device_ip)
+            def test_single_printer(self, ip, port):
+                """Test a single printer connection"""
+                try:
+                    # Check printer connection with timeout
+                    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    s.settimeout(1)  # 1 second timeout
+                    result = s.connect_ex((ip, port))
+                    s.close()
+                    
+                    available = (result == 0)
+                    if available:
+                        logging.info(f"Printer connection successful ({ip}:{port})")
+                    else:
+                        logging.warning(f"Printer connection failed ({ip}:{port})")
+                    return available
+                except Exception as e:
+                    logging.error(f"Error testing printer connection: {e}")
+                    return False
         
-        # Test each unique printer
-        logging.info(f"Testing {len(unique_printers)} unique printer connections")
-        for printer_key, printer_info in unique_printers.items():
+        # Determine which mode we're in
+        if not self.device_printers:
+            # Legacy mode - get printer info
             try:
-                # Check printer connection with short timeout
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                s.settimeout(0.5)  # 0.5 second timeout for faster checks
-                result = s.connect_ex((printer_info['ip'], printer_info['port']))
-                s.close()
-                
-                available = (result == 0)
-                
-                # Update availability for all devices using this printer
-                for device_ip in printer_info['devices']:
-                    if device_ip in self.device_printers:
-                        self.device_printers[device_ip]['available'] = available
-                
-                if available:
-                    logging.info(f"Printer {printer_info['ip']}:{printer_info['port']} connection successful (for {len(printer_info['devices'])} devices)")
-                else:
-                    logging.warning(f"Printer {printer_info['ip']}:{printer_info['port']} connection failed (for {len(printer_info['devices'])} devices)")
+                if not hasattr(self, 'printer_ip') or not hasattr(self, 'printer_port'):
+                    try:
+                        with open('appSettings.json', 'r') as f:
+                            app_settings = json.load(f)
+                            printer_config = app_settings.get('PrinterConfig', {})
+                            self.printer_ip = printer_config.get('IP', "192.168.0.253")
+                            self.printer_port = printer_config.get('Port', 9100)
+                            self.header = printer_config.get('Header', {'enable': True, 'text': "EzeeCanteen"})
+                            self.footer = printer_config.get('Footer', {'enable': True, 'text': "Thank you!"})
+                            logging.info(f"Loaded printer config: IP={self.printer_ip}, Port={self.printer_port}")
+                    except Exception as e:
+                        self.printer_ip = "192.168.0.253"
+                        self.printer_port = 9100
+                        self.header = {'enable': True, 'text': "EzeeCanteen"}
+                        self.footer = {'enable': True, 'text': "Thank you!"}
+                        logging.error(f"Error loading printer settings: {e}")
+                        
+                    # Create and start worker for legacy mode
+                    self.printer_test_worker = PrinterTestWorker(self, None, self.printer_ip, self.printer_port)
+                    self.printer_test_worker.finished.connect(self.on_legacy_printer_test_finished)
+                    self.printer_test_worker.start()
             except Exception as e:
-                # Handle socket errors gracefully
-                logging.error(f"Error testing printer {printer_info['ip']}:{printer_info['port']}: {e}")
-                for device_ip in printer_info['devices']:
-                    if device_ip in self.device_printers:
-                        self.device_printers[device_ip]['available'] = False
+                logging.error(f"Error setting up printer test: {e}")
+                self.printer_available = False
         else:
-            # Legacy mode - test the single printer
-            self.test_printer_connection()
-            
+            # Modern mode with multiple devices
+            self.printer_test_worker = PrinterTestWorker(self, self.device_printers)
+            self.printer_test_worker.finished.connect(self.on_printer_test_finished)
+            self.printer_test_worker.start()
+
+    def on_printer_test_finished(self):
+        """Process results from printer test worker"""
+        worker = self.printer_test_worker
+        
+        # Update availability for each device's printer
+        for device_ip, available in worker.results.items():
+            if device_ip in self.device_printers:
+                self.device_printers[device_ip]['available'] = available
+        
+        # Clean up
+        self.printer_test_worker = None
+
+    def on_legacy_printer_test_finished(self):
+        """Process results from legacy printer test worker"""
+        worker = self.printer_test_worker
+        
+        # Update legacy printer availability
+        self.printer_available = worker.legacy_result
+        
+        # Clean up
+        self.printer_test_worker = None
+    
     def test_printer_connection(self):
         """Legacy method to test single printer connection"""
         self.printer_available = False
@@ -1230,24 +1571,46 @@ class EzeeCanteen(QMainWindow):
         
     def test_db_connection(self):
         """Test the database connection and set a flag if it's not available"""
-        self.db_available = False
-        try:
-            logging.info(f"Testing database connection to {DB_HOST}:{DB_PORT}")
-            conn = mysql.connector.connect(
-                host=DB_HOST,
-                user=DB_USER,
-                port=DB_PORT,
-                password=DB_PASS,
-                database=DB_NAME
-            )
-            if conn.is_connected():
-                self.db_available = True
-                logging.info("Database connection successful")
-                conn.close()
-        except Exception as e:
-            logging.error(f"Database connection error: {e}")
-            print("Program will continue without database functionality")
+        # Create a worker thread to test database connection
+        class DBTestWorker(QThread):
+            def __init__(self, parent):
+                super().__init__(parent)
+                self.db_available = False
+                
+            def run(self):
+                try:
+                    logging.info(f"Testing database connection to {DB_HOST}:{DB_PORT}")
+                    conn = mysql.connector.connect(
+                        host=DB_HOST,
+                        user=DB_USER,
+                        port=DB_PORT,
+                        password=DB_PASS,
+                        database=DB_NAME,
+                        connection_timeout=5  # Add timeout to prevent hanging
+                    )
+                    if conn.is_connected():
+                        self.db_available = True
+                        logging.info("Database connection successful")
+                        conn.close()
+                except Exception as e:
+                    logging.error(f"Database connection error: {e}")
+                    print("Program will continue without database functionality")
         
+        # Create and start worker
+        self.db_test_worker = DBTestWorker(self)
+        self.db_test_worker.finished.connect(self.on_db_test_finished)
+        self.db_test_worker.start()
+        
+        # Set default value until test completes
+        self.db_available = False
+
+    def on_db_test_finished(self):
+        """Process results from database test worker"""
+        self.db_available = self.db_test_worker.db_available
+        
+        # Clean up
+        self.db_test_worker = None
+    
     def insert_to_database(self, event_data):
         print("event_data",event_data)
         """Insert authentication data into the database"""
@@ -1369,13 +1732,39 @@ class EzeeCanteen(QMainWindow):
                 # Legacy mode - use the global IP
                 device_ip = IP
             
+            # Get license key from LicenseManager
+            license_key = ""
+            try:
+                # Create a license manager instance
+                license_manager = LicenseManager()
+                
+                # We need to run the async method in a synchronous context
+                def get_license_data():
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    try:
+                        license_data = loop.run_until_complete(license_manager.get_license_db())
+                        return license_data
+                    finally:
+                        loop.close()
+                
+                # Get license data and extract the key
+                license_data = get_license_data()
+                if license_data and 'LicenseKey' in license_data:
+                    license_key = license_data['LicenseKey']
+                    logging.info(f"Retrieved license key for database insertion: {license_key}")
+                else:
+                    logging.warning("Could not retrieve license key for database insertion")
+            except Exception as e:
+                logging.error(f"Error getting license key: {e}")
+            
             # Prepare SQL query
             sql = f"""
                 INSERT INTO {DB_TABLE} (
                     PunchCardNo, PunchDateTime, PunchPicURL, RecognitionMode, 
                     IPAddress, AttendanceStatus, DB, AttInOut, Inserted, ZK_SerialNo, LogTransferDate, CanteenMode,
-                    Fooditem, totalAmount
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    Fooditem, totalAmount, LicenseKey
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
             
             # Get device serial based on which device generated the event
@@ -1404,7 +1793,8 @@ class EzeeCanteen(QMainWindow):
                 datetime.now().strftime("%Y-%m-%d %H:%M:%S"),  # LogTransferDate
                 'timeBase',                             # CanteenMode
                 meal_type,                              # Fooditem
-                total_price                             # totalAmount
+                total_price,                            # totalAmount
+                license_key                             # LicenseKey
             )
             
             # Execute query
@@ -1652,14 +2042,17 @@ class EzeeCanteen(QMainWindow):
                         # Get employee ID
                         emp_id = event_data.get('employeeNoString', event_data.get('employeeNo', None))
                         emp_name = event_data.get('name', None)
+                        # Get the source device IP from the event data
+                        source_device_ip = event_data.get('source_device_ip')
+                        
                         print("THOS IOS TJHE OMNAME OF TJHE EM<PT: ", emp_name)
                         print(f"\n----------------------------------------\nemp_name: {emp_name}\nemp_id: {emp_id}\n----------------------------------------\n")
                         if emp_id and emp_name:
                             print("BOTHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH")
-                            self.update_user_begin_time(emp_id, emp_name, app_settings)
+                            self.update_user_begin_time(emp_id, emp_name, app_settings, source_device_ip)
                         elif emp_id:
                             print("SINGLEEEEEEEEEEEEEEEEEEEEEEEEEEEEE")
-                            self.update_user_begin_time(emp_id, app_settings)
+                            self.update_user_begin_time(emp_id, None, app_settings, source_device_ip)
                         else:
                             print(f"No employee ID or name found for event data: {event_data}")
 
@@ -1690,7 +2083,7 @@ class EzeeCanteen(QMainWindow):
             # Determine coupon type based on current time from appSettings.json
             try:
                 current_time = datetime.now().strftime('%H:%M')
-                coupon_type = "MEAL"  # Default value
+                coupon_type = "MEAL"
                 
                 # Read meal schedule from appSettings.json
                 with open('appSettings.json', 'r') as f:
@@ -1909,7 +2302,7 @@ class EzeeCanteen(QMainWindow):
             if len(self.events) > self.max_events:
                 self.events = self.events[:self.max_events]
     
-    def update_user_begin_time(self, employee_no, employee_name, app_settings):
+    def update_user_begin_time(self, employee_no, employee_name, app_settings, source_device_ip=None):
         """Update the user's begin time to the next meal time"""
         try:
             # Get current time
@@ -1953,15 +2346,28 @@ class EzeeCanteen(QMainWindow):
             
             # If we have multiple devices configured
             if hasattr(self, 'active_devices') and self.active_devices:
-                # Try to identify which device generated this event or use the first one
-                device_ip = next(iter(self.active_devices))
-                device_info = self.active_devices[device_ip]
-                device_auth = {
-                    'ip': device_info['monitor'].ip,
-                    'port': device_info['monitor'].port,
-                    'user': device_info['monitor'].username,
-                    'password': device_info['monitor'].password
-                }
+                if source_device_ip and source_device_ip in self.active_devices:
+                    # Use the device that generated this event
+                    device_ip = source_device_ip
+                    device_info = self.active_devices[device_ip]
+                    device_auth = {
+                        'ip': device_info['monitor'].ip,
+                        'port': device_info['monitor'].port,
+                        'user': device_info['monitor'].username,
+                        'password': device_info['monitor'].password
+                    }
+                    logging.info(f"Using source device {device_ip} for updating begin time")
+                else:
+                    # Fallback to first device if source device not found
+                    device_ip = next(iter(self.active_devices))
+                    device_info = self.active_devices[device_ip]
+                    device_auth = {
+                        'ip': device_info['monitor'].ip,
+                        'port': device_info['monitor'].port,
+                        'user': device_info['monitor'].username,
+                        'password': device_info['monitor'].password
+                    }
+                    logging.warning(f"Source device {source_device_ip} not found, using {device_ip} instead")
             else:
                 # Legacy mode - use the global values
                 device_auth = {
@@ -1970,6 +2376,7 @@ class EzeeCanteen(QMainWindow):
                     'user': USERNAME,
                     'password': PASSWORD
                 }
+                logging.info("Using legacy device configuration")
             
             # Construct base URL
             base_url = f"http://{device_auth['ip']}:{device_auth['port']}"
@@ -1987,6 +2394,7 @@ class EzeeCanteen(QMainWindow):
                 next_begin_time,
                 employee_name
             )
+            print(f"result of update_user_begin_time: {result}")
             print(f"\n----------------------------------------\nTime updated result: {result}\n----------------------------------------\n")
             logging.info(f"User begin time update result: {result}")
             
@@ -1995,66 +2403,159 @@ class EzeeCanteen(QMainWindow):
             
     def open_settings(self):
         """Function to handle settings button click"""
-        logging.info("Settings button clicked - stopping authentication monitor")
+        logging.info("Settings button clicked - stopping all background processes")
+        
+        # Create and show loading screen
+        loading_frame = QFrame(self)
+        loading_frame.setStyleSheet("""
+            QFrame {
+                background-color: #152238;
+                border-radius: 8px;
+                padding: 20px;
+            }
+        """)
+        loading_layout = QVBoxLayout(loading_frame)
+        
+        loading_label = QLabel("Loading Settings...")
+        loading_label.setStyleSheet("font-size: 18px; color: white; font-weight: bold;")
+        loading_label.setAlignment(Qt.AlignCenter)
+        loading_layout.addWidget(loading_label)
+        
+        loading_progress = QProgressBar()
+        loading_progress.setStyleSheet("""
+            QProgressBar {
+                border: 2px solid #2c3e50;
+                border-radius: 5px;
+                text-align: center;
+                background-color: #1f2937;
+                height: 20px;
+            }
+            QProgressBar::chunk {
+                background-color: #3498db;
+                width: 10px;
+                margin: 0.5px;
+            }
+        """)
+        loading_progress.setMinimum(0)
+        loading_progress.setMaximum(0)  # Indeterminate progress
+        loading_layout.addWidget(loading_progress)
+        
+        # Set loading frame as central widget
+        self.setCentralWidget(loading_frame)
+        
+        # Process events to show loading screen
+        QApplication.processEvents()
+        
         try:
-            # Stop the authentication monitor
+            # Stop all active device monitors
+            if hasattr(self, 'active_devices'):
+                for device_ip, device_info in self.active_devices.items():
+                    monitor = device_info['monitor']
+                    if monitor and monitor.isRunning():
+                        try:
+                            monitor.stop()
+                            if not monitor.wait(1000):  # 1 second timeout
+                                monitor.terminate()
+                                monitor.wait()
+                            logging.info(f"Stopped monitor for device {device_ip}")
+                        except Exception as e:
+                            logging.error(f"Error stopping monitor for device {device_ip}: {e}")
+                self.active_devices.clear()
+
+            # Stop legacy auth monitor if it exists
             if hasattr(self, 'auth_monitor'):
                 self.communicator.stop_server.emit()
-                
-                # Give the monitor a moment to process the stop signal
-                QTimer.singleShot(100, self._continue_to_settings)
-            else:
-                self._continue_to_settings()
+                if self.auth_monitor.isRunning():
+                    if not self.auth_monitor.wait(1000):  # 1 second timeout
+                        self.auth_monitor.terminate()
+                        self.auth_monitor.wait()
+                delattr(self, 'auth_monitor')
+
+            # Stop printer check timer
+            if hasattr(self, 'printer_check_timer') and self.printer_check_timer.isActive():
+                self.printer_check_timer.stop()
+
+            # Clear all events and grid
+            self.events.clear()
+            self.clear_grid()
+
+            # Give a moment for cleanup before continuing to settings
+            QTimer.singleShot(100, self._continue_to_settings)
         except Exception as e:
-            logging.error(f"Error stopping authentication monitor: {e}")
+            logging.error(f"Error stopping background processes: {e}")
             self._continue_to_settings()
     
     def _continue_to_settings(self):
         """Continue with opening settings after stopping monitor"""
         try:
-            # Check if we're in settings mode
-            if self.settings_mode and self.parent_window:
-                # If we are, recreate the settings UI
-                try:
-                    from settings import main as settings_main
-                    new_settings_widget = settings_main()
-                    
-                    # Set new settings widget as central widget of parent
-                    self.parent_window.setCentralWidget(new_settings_widget)
-                    
-                    # No need to close this instance as it will be removed by setCentralWidget
-                except Exception as e:
-                    logging.error(f"Error recreating settings view: {e}")
-                    # Fall back to closing ourselves if there's an error
-                    self.close()
-                    os.system("python settings.py")
-                return
+            # Import the settings module and get settings window with license key
+            from settings import main as settings_main
+            from licenseManager import LicenseManager
+            import asyncio
             
-            # If not in settings mode, try to load the settings UI in the same window
-            try:
-                # Save current window geometry
-                geometry = self.geometry()
-                
-                # Import the settings module and get settings window
-                from settings import main as settings_main
-                settings_window = settings_main()
-                
-                # Set settings as central widget
-                self.setCentralWidget(settings_window)
-                
-                # Restore window geometry
-                self.setGeometry(geometry)
-                
-            except Exception as e:
-                logging.error(f"Error loading settings view: {e}")
-                # If there's an error, fall back to the original approach
-                self.close()
-                os.system("python settings.py")
+            # Get license key
+            license_manager = LicenseManager()
+            
+            async def get_license_data_async():
+                try:
+                    return await license_manager.get_license_db()
+                except Exception as e:
+                    logging.error(f"Error getting license data: {e}")
+                    return None
+                    
+            def get_license_data():
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    license_data = loop.run_until_complete(get_license_data_async())
+                    return license_data
+                finally:
+                    loop.close()
+            
+            # Get license data
+            license_data = get_license_data()
+            license_key = license_data.get('LicenseKey') if license_data else None
+            
+            # Save current window geometry
+            geometry = self.geometry()
+            
+            # Create settings window with license key
+            settings_window = settings_main(license_key)
+            
+            # Set settings as central widget
+            self.setCentralWidget(settings_window)
+            
+            # Restore window geometry
+            self.setGeometry(geometry)
+
+            # Set settings mode flag
+            self.settings_mode = True
+            
+            # Remove references to background processes
+            if hasattr(self, 'communicator'):
+                self.communicator.new_auth_event.disconnect()
+            
+            # Clean up any remaining references
+            self.events = []
+            if hasattr(self, 'active_devices'):
+                # Don't delete the attribute, just clear the dictionary
+                self.active_devices.clear()
+                logging.info("Cleared active_devices dictionary instead of deleting it")
+            if hasattr(self, 'auth_monitor'):
+                delattr(self, 'auth_monitor')
+            if hasattr(self, 'printer_check_timer'):
+                delattr(self, 'printer_check_timer')
+            
         except Exception as e:
-            logging.error(f"Unexpected error opening settings: {e}")
-            # Ultimate fallback
-            self.close()
-            os.system("python settings.py")
+            logging.error(f"Error opening settings view: {e}")
+            # Show error message to user
+            from PyQt5.QtWidgets import QMessageBox
+            error_dialog = QMessageBox()
+            error_dialog.setIcon(QMessageBox.Critical)
+            error_dialog.setText("Error opening settings")
+            error_dialog.setInformativeText(str(e))
+            error_dialog.setWindowTitle("Error")
+            error_dialog.exec_()
     
     def clear_grid(self):
         """Clear all items from the grid layout"""
@@ -2195,6 +2696,11 @@ def main():
     if standalone:
         app = QApplication(sys.argv)
     
+    # Always refresh device configurations when entering from settings.py
+    logging.info("Refreshing device and printer configurations...")
+    fetch_device_config(force_refresh=True)
+    print_server_addresses()  # Print refreshed server addresses
+    
     # Create temp directory if it doesn't exist
     if not os.path.exists(TEMP_DIR):
         os.makedirs(TEMP_DIR)
@@ -2202,6 +2708,11 @@ def main():
         logging.info(f"Created temporary directory for images: {TEMP_DIR}")
         
     window = EzeeCanteen()
+    
+    # Ensure critical attributes are initialized
+    if not hasattr(window, 'active_devices'):
+        logging.info("Initializing active_devices in main()")
+        window.active_devices = {}
     
     if standalone:
         window.show()

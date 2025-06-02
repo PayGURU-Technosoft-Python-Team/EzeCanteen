@@ -275,28 +275,6 @@ class PrinterSelectionDialog(QDialog):
         button_layout.setSpacing(15)
         button_layout.addStretch()
         
-        self.select_all_button = QPushButton("Select All")
-        self.select_all_button.setMinimumHeight(40)
-        self.select_all_button.setStyleSheet("""
-            QPushButton {
-                background-color: #22c55e;
-                color: white;
-                padding: 10px 20px;
-                font-weight: bold;
-                font-size: 13px;
-                border-radius: 6px;
-            }
-            QPushButton:hover {
-                background-color: #16a34a;
-            }
-            QPushButton:disabled {
-                background-color: #6b7280;
-                color: #9ca3af;
-            }
-        """)
-        self.select_all_button.clicked.connect(self.select_all_printers)
-        self.select_all_button.setEnabled(False)
-        
         self.add_selected_button = QPushButton("Add Selected Printers")
         self.add_selected_button.setMinimumHeight(40)
         self.add_selected_button.setStyleSheet("""
@@ -336,7 +314,6 @@ class PrinterSelectionDialog(QDialog):
         """)
         self.close_button.clicked.connect(self.close)
         
-        button_layout.addWidget(self.select_all_button)
         button_layout.addWidget(self.add_selected_button)
         button_layout.addWidget(self.close_button)
         
@@ -361,7 +338,6 @@ class PrinterSelectionDialog(QDialog):
         # Disable scan button and enable progress updates
         self.scan_button.setEnabled(False)
         self.scan_button.setText("Scanning...")
-        self.select_all_button.setEnabled(False)
         self.add_selected_button.setEnabled(False)
         
         # Start scanning thread
@@ -394,8 +370,6 @@ class PrinterSelectionDialog(QDialog):
         self.scan_button.setText("Start Network Scan")
         
         if found_printers:
-            self.select_all_button.setEnabled(True)
-            # Note: add_selected_button is enabled only when items are selected
             self.progress_label.setText(f"Scan complete! Found {len(found_printers)} printers. Please select printers to add.")
             
             # If only one printer was found, auto-select it
@@ -403,12 +377,6 @@ class PrinterSelectionDialog(QDialog):
                 self.printer_list.item(0).setSelected(True)
         else:
             self.progress_label.setText("Scan complete. No printers found.")
-            self.select_all_button.setEnabled(False)
-    
-    def select_all_printers(self):
-        """Select all printers in the list"""
-        for i in range(self.printer_list.count()):
-            self.printer_list.item(i).setSelected(True)
     
     def add_selected_printers(self):
         """Add selected printers and close dialog"""
@@ -433,16 +401,39 @@ class PrinterSelectionDialog(QDialog):
         # Close the dialog
         self.accept()
 
+import logging
+import asyncio
+from licenseManager import LicenseManager  
+
 class PrinterSetupWindow(QMainWindow):
     # Signal for when printer is saved
     printer_saved = pyqtSignal(dict)
-    
     def __init__(self, edit_printer=None):
         super().__init__()
         self.setWindowTitle("EzeeCanteen")
         self.resize(650, 700)
         
-        # Store printer data if editing
+        license_manager = LicenseManager()
+                
+        # We need to run the async method in a synchronous context
+        def get_license_data():
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                license_data = loop.run_until_complete(license_manager.get_license_db())
+                return license_data
+            finally:
+                loop.close()
+        
+        # Get license data and extract the key
+        license_data = get_license_data()
+        if license_data and 'LicenseKey' in license_data:
+            self.license_key = license_data['LicenseKey']
+            print("*****************")
+            print(self.license_key)
+            print("*****************")
+        
+
         self.edit_mode = edit_printer is not None
         self.edit_printer = edit_printer or {}
         
@@ -725,14 +716,13 @@ class PrinterSetupWindow(QMainWindow):
                 sql = """
                 INSERT INTO configh (
                     DeviceType, DeviceNumber, IP, Port, ComUser, 
-                    comKey, Enable, CreatedDateTime, DevicePrinterIP, DeviceLocation
+                    comKey, Enable, CreatedDateTime, DevicePrinterIP, DeviceLocation, LicenseKey
                 ) VALUES (
                      %s, %s, %s, %s, %s, 
                     AES_ENCRYPT(%s, SHA2(CONCAT('pg2175', %s), 512)), 
-                    %s, %s, %s, %s
+                    %s, %s, %s, %s, %s
                 )
                 """
-                
                 values = (
                     printer_data['name'],  # DeviceType
                     device_number,
@@ -744,7 +734,8 @@ class PrinterSetupWindow(QMainWindow):
                     'Y',            # Enable value
                     formatted_now,  # CreatedDateTime field
                     "",             # DevicePrinterIP - empty for printers
-                    location        # DeviceLocation with font size
+                    location,        # DeviceLocation with font size
+                    self.license_key  # LicenseKey
                 )
                 
                 cursor.execute(sql, values)
@@ -951,7 +942,7 @@ class PrinterSetupWindow(QMainWindow):
     def get_next_device_number(self, cursor, device_type):
         """Get the next available device number"""
         try:
-            cursor.execute("SELECT MAX(DeviceNumber) FROM configh WHERE DeviceType = %s", (device_type,))
+            cursor.execute("SELECT MAX(DeviceNumber) FROM configh WHERE DeviceType = %s AND LicenseKey = '{self.license_Key}", (device_type,))
             result = cursor.fetchone()
             max_num = result[0] if result[0] is not None else 0
             return max_num + 1
@@ -989,15 +980,11 @@ class PrinterSetupWindow(QMainWindow):
             cursor = conn.cursor()
             
             # Convert header/footer to location text
-            location = f"FontSize:{font_size}"
-            if header["enable"]:
-                location += f"|Header:{header['text']}"
-            if footer["enable"]:
-                location += f"|Footer:{footer['text']}"
+            location = " "
             
             # Set enable value - Enable by default
             enable_value = 'Y'
-            
+            print("location ->>>>>>>>",location)
             if self.edit_mode:
                 # Update existing printer
                 device_number = self.edit_printer.get('deviceNumber', 1)
@@ -1009,9 +996,10 @@ class PrinterSetupWindow(QMainWindow):
                     Port = %s,
                     DeviceLocation = %s,
                     Enable = %s
-                WHERE DeviceType = %s AND DeviceNumber = %s
+                WHERE DeviceType = %s AND DeviceNumber = %s AND LicenseKey = '{self.license_key}'
                 """
-                
+                print("location ->>>>>>>>",location)
+
                 # Execute SQL with values
                 values = (
                     printer_ip,
@@ -1042,11 +1030,11 @@ class PrinterSetupWindow(QMainWindow):
                 sql = """
                 INSERT INTO configh (
                     DeviceType, DeviceNumber, IP, Port, ComUser, 
-                    comKey, Enable, CreatedDateTime, DevicePrinterIP
+                    comKey, Enable, CreatedDateTime, DevicePrinterIP, LicenseKey
                 ) VALUES (
                      %s, %s, %s, %s, %s, 
                     AES_ENCRYPT(%s, SHA2(CONCAT('pg2175', %s), 512)), 
-                    %s, %s, %s
+                    %s, %s, %s, %s
                 )
                 """
                 
@@ -1061,7 +1049,8 @@ class PrinterSetupWindow(QMainWindow):
                     formatted_now,  # Pass timestamp for encryption
                     enable_value,
                     formatted_now,  # CreatedDateTime field
-                    ""  # DevicePrinterIP - empty for printers
+                    "",  # DevicePrinterIP - empty for printers
+                    self.license_key  # LicenseKey
                 )
                 
                 cursor.execute(sql, values)
@@ -1132,6 +1121,7 @@ class PrinterSetupWindow(QMainWindow):
             
     def save_to_json(self, printer_data):
         """Save the printer information to JSON file for compatibility"""
+        print("printer_data ->>>>>>>>",printer_data)
         # Load current settings
         settings = self.load_settings()
         

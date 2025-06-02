@@ -13,6 +13,9 @@ from PyQt5.QtWidgets import QGraphicsOpacityEffect
 from reportGen import generate_monthly_report, generate_daily_report, generate_logs_report, generate_timebase_monthly_report
 # Import email functions
 from AddMail import send_daily_report_email, send_monthly_report_email
+# Import license manager
+from licenseManager import LicenseManager
+import asyncio
 
 
 class LoadingSpinner(QWidget):
@@ -69,7 +72,30 @@ class WorkerThread(QThread):
         super().__init__()
         self.operation = operation
         self.args = args
-        
+
+    def get_license_key(self):
+        try:
+            from licenseManager import LicenseManager
+            import asyncio
+
+            def get_license_data():
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    license_manager = LicenseManager()
+                    license_data = loop.run_until_complete(license_manager.get_license_db())
+                    return license_data
+                finally:
+                    loop.close()
+            
+            # Get license data and extract the key
+            license_data = get_license_data()
+            if license_data and 'LicenseKey' in license_data:
+                return license_data['LicenseKey']
+        except Exception as e:
+            print(f"Error getting license key: {str(e)}")
+        return None
+
     def run(self):
         try:
             # Define reports output directory
@@ -106,18 +132,32 @@ class WorkerThread(QThread):
                     self.finished.emit(False, "Error: Failed to send email. Check mail settings and try again.")
                 
             elif self.operation == "daily_report":
-                # Get today's date
+                # Get today's date and license key
                 today = datetime.datetime.now().strftime("%Y-%m-%d")
-                file_path = generate_daily_report(today, output_dir)
+                
+                # Get license key from database
+                license_key = self.get_license_key()
+                if not license_key:
+                    self.finished.emit(False, "Error: License key not found in database")
+                    return
+                    
+                file_path = generate_daily_report(today, license_key, output_dir)
                 result = file_path is not None
                 success_msg = f"Daily report saved to {file_path}" if result else "Error: Daily report not generated"
                 error_msg = "Error generating daily report"
             elif self.operation == "monthly_report":
                 month, year = self.args
+                
+                # Get license key from database
+                license_key = self.get_license_key()
+                if not license_key:
+                    self.finished.emit(False, "Error: License key not found in database")
+                    return
+                    
                 # Generate three types of reports using generate_timebase_monthly_report
-                device_report = generate_timebase_monthly_report(year, month, "deviceoptions", output_dir)
-                time_report = generate_timebase_monthly_report(year, month, "timeoptions", output_dir)
-                menu_report = generate_timebase_monthly_report(year, month, "menuoptions", output_dir)
+                device_report = generate_timebase_monthly_report(year, month, "deviceoptions", LK=license_key, output_dir=output_dir)
+                time_report = generate_timebase_monthly_report(year, month, "timeoptions", LK=license_key, output_dir=output_dir)
+                menu_report = generate_timebase_monthly_report(year, month, "menuoptions", LK=license_key, output_dir=output_dir)
                 
                 # Check if at least one report was generated successfully
                 if device_report or time_report or menu_report:
@@ -138,7 +178,14 @@ class WorkerThread(QThread):
                 error_msg = "Error generating monthly reports"
             elif self.operation == "canteen_log":
                 month, year = self.args
-                file_path = generate_logs_report(year, month, output_dir)
+                
+                # Get license key from database
+                license_key = self.get_license_key()
+                if not license_key:
+                    self.finished.emit(False, "Error: License key not found in database")
+                    return
+                    
+                file_path = generate_logs_report(year, month, license_key, output_dir)
                 result = file_path is not None
                 success_msg = f"Canteen logs saved to {file_path}" if result else "Error: Canteen logs not generated"
                 error_msg = "Error generating canteen logs"

@@ -13,9 +13,12 @@ DB_PASS = "L^{Z,8~zzfF9(nd8"
 DB_NAME = "payguru_canteen"
 DB_TABLE = "sequentiallog"
 
-def connect_to_database():
+def connect_to_database(license_key):
     """
     Create and return a connection to the database
+    
+    Args:
+        license_key (str): The license key for authentication
     """
     try:
         conn = mysql.connector.connect(
@@ -30,13 +33,14 @@ def connect_to_database():
         print(f"Error connecting to database: {e}")
         return None
 
-def generate_monthly_report(year, month, output_dir="Reports/monthly"):
+def generate_monthly_report(year, month, LK=None, output_dir="Reports/monthly"):
     """
     Generate a monthly report showing count of meal types per day
 
     Args:
         year (int): Year for the report
         month (int): Month for the report (1-12)
+        LK (str): License key for authentication
         output_dir (str): Directory to save the output file
         
     Returns:
@@ -55,7 +59,7 @@ def generate_monthly_report(year, month, output_dir="Reports/monthly"):
             os.makedirs(output_dir)
         
         # Connect to database
-        conn = connect_to_database()
+        conn = connect_to_database(LK)
         if not conn:
             return None
         
@@ -200,27 +204,38 @@ def generate_monthly_report(year, month, output_dir="Reports/monthly"):
         print(f"Error generating monthly report: {e}")
         return None
 
-def generate_daily_report(date, output_dir="Reports/daily"):
+def generate_daily_report(date, LK, output_dir="Reports/daily"):
     """
     Generate a daily report showing all entries for a specific date
     
     Args:
-        date (str): Date in format YYYY-MM-DD
+        date (str or datetime.date): Date in format YYYY-MM-DD or a datetime.date object
+        LK (str): License key for authentication
         output_dir (str): Directory to save the output file
         
     Returns:
         str: Path to the generated Excel file or None if error
     """
     try:
-        # Validate date format
-        datetime.strptime(date, "%Y-%m-%d")
+        # Validate and convert date if it's a string
+        date_obj = None
+        if isinstance(date, str):
+            try:
+                date_obj = datetime.strptime(date, '%Y-%m-%d').date()
+                date_str = date
+            except ValueError:
+                raise ValueError("Date must be in YYYY-MM-DD format")
+        else:
+            # Assume it's already a date object
+            date_obj = date
+            date_str = date_obj.strftime('%Y-%m-%d')
         
         # Create output directory if it doesn't exist
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
-        
+            
         # Connect to database
-        conn = connect_to_database()
+        conn = connect_to_database(LK)
         if not conn:
             return None
         
@@ -234,7 +249,8 @@ def generate_daily_report(date, output_dir="Reports/daily"):
                 TIME_FORMAT(PunchDateTime, '%H:%i:%s') as PunchTime,
                 Fooditem
             FROM {DB_TABLE}
-            WHERE DATE(PunchDateTime) = '{date}'
+            WHERE DATE(PunchDateTime) = '{date_str}'
+            AND LicenseKey = '{LK}'
             ORDER BY PunchDateTime
         """
         
@@ -247,7 +263,7 @@ def generate_daily_report(date, output_dir="Reports/daily"):
         
         # Process data
         if not results:
-            print(f"No data found for {date}")
+            print(f"No data found for {date_str}")
             # Create empty dataframe with required columns
             df = pd.DataFrame(columns=["Punch ID",  "Punch Date", "Punch Time", "Meal Type"])
         else:
@@ -264,9 +280,8 @@ def generate_daily_report(date, output_dir="Reports/daily"):
             # Rename columns to match expected format
             df = df.rename(columns={"PunchDate": "Punch Date", "PunchTime": "Punch Time"})
         
-        # Create Excel file
-        formatted_date = datetime.strptime(date, "%Y-%m-%d").strftime("%Y-%m-%d")
-        file_name = f"{formatted_date}_DailyConsumption.xlsx"
+        # Create Excel file - use the date_str we already have
+        file_name = f"{date_str}_DailyConsumption.xlsx"
         file_path = os.path.join(output_dir, file_name)
         
         # Create a Pandas Excel writer using openpyxl as the engine
@@ -328,7 +343,7 @@ def generate_daily_report(date, output_dir="Reports/daily"):
         print(f"Error generating daily report: {e}")
         return None
 
-def generate_logs_report(year, month, output_dir="Reports/CanteenLogs"):
+def generate_logs_report(year, month, LK, output_dir="Reports/CanteenLogs"):
     """
     Generate a logs report showing all entries for a specific month
     
@@ -353,7 +368,7 @@ def generate_logs_report(year, month, output_dir="Reports/CanteenLogs"):
             os.makedirs(output_dir)
         
         # Connect to database
-        conn = connect_to_database()
+        conn = connect_to_database(LK)
         if not conn:
             return None
         
@@ -368,6 +383,7 @@ def generate_logs_report(year, month, output_dir="Reports/CanteenLogs"):
                 Fooditem
             FROM {DB_TABLE}
             WHERE YEAR(PunchDateTime) = {year} AND MONTH(PunchDateTime) = {month}
+            AND LicenseKey = '{LK}'
             ORDER BY PunchDateTime
         """
         
@@ -461,7 +477,7 @@ def generate_logs_report(year, month, output_dir="Reports/CanteenLogs"):
         print(f"Error generating logs report: {e}")
         return None
 
-def generate_fooditem_count_report(output_dir="Reports/fooditemEvaluation"):
+def generate_fooditem_count_report(LK, output_dir="Reports/fooditemEvaluation"):
     """
     Generate a report showing counts of each food item in the database
     
@@ -475,9 +491,9 @@ def generate_fooditem_count_report(output_dir="Reports/fooditemEvaluation"):
         # Create output directory if it doesn't exist
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
-        
+            
         # Connect to database
-        conn = connect_to_database()
+        conn = connect_to_database(LK)
         if not conn:
             return None
         
@@ -576,7 +592,7 @@ def generate_fooditem_count_report(output_dir="Reports/fooditemEvaluation"):
         print(f"Error generating food item count report: {e}")
         return None
 
-def generate_device_report(workbook, year, month, month_number, output_dir, prompt_for_location):
+def generate_device_report(workbook, year, month, month_number, LK, output_dir, prompt_for_location):
     """Generate a device-based monthly report with three worksheets"""
     try:
         # Create worksheets
@@ -586,7 +602,7 @@ def generate_device_report(workbook, year, month, month_number, output_dir, prom
         detail_worksheet = workbook.create_sheet("Consumption Detail")
         
         # Connect to database
-        conn = connect_to_database()
+        conn = connect_to_database(LK)
         if not conn:
             return None
             
@@ -596,20 +612,22 @@ def generate_device_report(workbook, year, month, month_number, output_dir, prom
         meal_types_query = f"""
             SELECT DISTINCT Fooditem 
             FROM {DB_TABLE}
-            WHERE YEAR(PunchDateTime) = %s AND MONTH(PunchDateTime) = %s
+            WHERE YEAR(PunchDateTime) = %s 
+            AND MONTH(PunchDateTime) = %s
+            AND LicenseKey = %s
         """
-        cursor.execute(meal_types_query, (year, month))
+        cursor.execute(meal_types_query, (year, month, LK))
         meal_types = [row['Fooditem'] for row in cursor.fetchall()]
         
         # Fill Daily Summary worksheet
-        columns = fill_device_daily_summary(daily_worksheet, cursor, year, month, meal_types)
+        columns = fill_device_daily_summary(daily_worksheet, cursor, year, month, meal_types, LK)
         
         # Fill User Summary worksheet
-        fill_device_user_summary(user_worksheet, cursor, year, month, meal_types)
+        fill_device_user_summary(user_worksheet, cursor, year, month, meal_types, LK)
         
         # Fill Consumption Detail worksheet
         column_headers = [col for col in columns if col != "Date" and col != "Total"]
-        fill_device_consumption_detail(detail_worksheet, cursor, year, month, column_headers)
+        fill_device_consumption_detail(detail_worksheet, cursor, year, month, column_headers, LK)
         
         # Close database connection
         cursor.close()
@@ -636,7 +654,7 @@ def generate_device_report(workbook, year, month, month_number, output_dir, prom
         traceback.print_exc()
         return None
 
-def fill_device_daily_summary(worksheet, cursor, year, month, meal_types):
+def fill_device_daily_summary(worksheet, cursor, year, month, meal_types, LK):
     """Fill the Daily Summary worksheet for device-based report"""
     # Define headers
     columns = ["Date"] + meal_types + ["Total"]
@@ -661,12 +679,14 @@ def fill_device_daily_summary(worksheet, cursor, year, month, meal_types):
             Fooditem,
             COUNT(*) as Count
         FROM {DB_TABLE}
-        WHERE YEAR(PunchDateTime) = %s AND MONTH(PunchDateTime) = %s
+        WHERE YEAR(PunchDateTime) = %s 
+        AND MONTH(PunchDateTime) = %s
+        AND LicenseKey = %s
         GROUP BY DATE_FORMAT(PunchDateTime, '%d-%m-%Y'), Fooditem
         ORDER BY DATE(PunchDateTime)
     """
     
-    cursor.execute(query, (year, month))
+    cursor.execute(query, (year, month, LK))
     results = cursor.fetchall()
     
     # Process data by date
@@ -738,7 +758,7 @@ def fill_device_daily_summary(worksheet, cursor, year, month, meal_types):
     
     return columns
 
-def fill_device_user_summary(worksheet, cursor, year, month, meal_types):
+def fill_device_user_summary(worksheet, cursor, year, month, meal_types, LK):
     """Fill the User Summary worksheet for device-based report"""
     # Define headers
     columns = ["Year", "Month", "PunchID", "Name"] + meal_types
@@ -764,11 +784,12 @@ def fill_device_user_summary(worksheet, cursor, year, month, meal_types):
             COUNT(*) as Count
         FROM {DB_TABLE}
         WHERE YEAR(PunchDateTime) = %s AND MONTH(PunchDateTime) = %s
+        AND LicenseKey = %s
         GROUP BY PunchCardNo, Fooditem
         ORDER BY PunchCardNo
     """
     
-    cursor.execute(query, (year, month))
+    cursor.execute(query, (year, month, LK))
     results = cursor.fetchall()
     
     # Process data by user
@@ -837,7 +858,7 @@ def fill_device_user_summary(worksheet, cursor, year, month, meal_types):
         adjusted_width = max_length + 2
         worksheet.column_dimensions[column_letter].width = adjusted_width
 
-def fill_device_consumption_detail(worksheet, cursor, year, month, meal_types):
+def fill_device_consumption_detail(worksheet, cursor, year, month, meal_types, LK):
     """Fill the Consumption Detail worksheet for device-based report"""
     # Define headers - Employee, Meal Label, Total, then day numbers 1-31
     columns = ["Employee", "Meal Label", "Total"] + [str(i) for i in range(1, 32)]
@@ -864,11 +885,12 @@ def fill_device_consumption_detail(worksheet, cursor, year, month, meal_types):
             COUNT(*) as Count
         FROM {DB_TABLE}
         WHERE YEAR(PunchDateTime) = %s AND MONTH(PunchDateTime) = %s
+        AND LicenseKey = %s
         GROUP BY PunchCardNo, Fooditem, DAY(PunchDateTime)
         ORDER BY PunchCardNo, Fooditem, Day
     """
     
-    cursor.execute(query, (year, month))
+    cursor.execute(query, (year, month, LK))
     results = cursor.fetchall()
     
     # Process data by user and meal type
@@ -893,9 +915,11 @@ def fill_device_consumption_detail(worksheet, cursor, year, month, meal_types):
     row_idx = 2
     for user_id, meal_data in sorted(data_by_user_meal.items()):
         first_meal = True
-        for meal_type, day_data in sorted(meal_data.items()):
-            if meal_type not in meal_types:
+        for meal_type in meal_types:
+            if meal_type not in meal_data:
                 continue
+                
+            day_data = meal_data[meal_type]
                 
             # First column: User ID (only for first meal type)
             if first_meal:
@@ -943,7 +967,7 @@ def fill_device_consumption_detail(worksheet, cursor, year, month, meal_types):
         adjusted_width = max_length + 2
         worksheet.column_dimensions[column_letter].width = adjusted_width
 
-def generate_time_report(workbook, year, month, month_number, output_dir, prompt_for_location):
+def generate_time_report(workbook, year, month, month_number, LK, output_dir, prompt_for_location):
     """Generate a time-based monthly report with three worksheets"""
     try:
         # Create worksheets
@@ -953,7 +977,7 @@ def generate_time_report(workbook, year, month, month_number, output_dir, prompt
         detail_worksheet = workbook.create_sheet("Consumption Detail")
         
         # Connect to database
-        conn = connect_to_database()
+        conn = connect_to_database(LK)
         if not conn:
             return None
             
@@ -969,6 +993,8 @@ def generate_time_report(workbook, year, month, month_number, output_dir, prompt
                 END as MealType
             FROM {DB_TABLE}
             WHERE YEAR(PunchDateTime) = %s AND MONTH(PunchDateTime) = %s
+            AND LicenseKey = %s
+
             ORDER BY 
                 CASE 
                     WHEN HOUR(PunchDateTime) < 10 THEN 1
@@ -976,7 +1002,7 @@ def generate_time_report(workbook, year, month, month_number, output_dir, prompt
                     ELSE 3
                 END
         """
-        cursor.execute(meal_schedule_query, (year, month))
+        cursor.execute(meal_schedule_query, (year, month, LK))
         meal_types = [row['MealType'] for row in cursor.fetchall()]
         
         # If no meal types found, use defaults
@@ -984,13 +1010,13 @@ def generate_time_report(workbook, year, month, month_number, output_dir, prompt
             meal_types = ["Breakfast", "Lunch", "Dinner"]
         
         # Fill Daily Summary worksheet
-        fill_time_daily_summary(daily_worksheet, cursor, year, month, meal_types)
+        fill_time_daily_summary(daily_worksheet, cursor, year, month, meal_types, LK)
         
         # Fill User Summary worksheet
-        fill_time_user_summary(user_worksheet, cursor, year, month, meal_types)
+        fill_time_user_summary(user_worksheet, cursor, year, month, meal_types, LK)
         
         # Fill Consumption Detail worksheet
-        fill_time_consumption_detail(detail_worksheet, cursor, year, month, meal_types)
+        fill_time_consumption_detail(detail_worksheet, cursor, year, month, meal_types, LK)
         
         # Close database connection
         cursor.close()
@@ -1017,7 +1043,7 @@ def generate_time_report(workbook, year, month, month_number, output_dir, prompt
         traceback.print_exc()
         return None
 
-def fill_time_daily_summary(worksheet, cursor, year, month, meal_types):
+def fill_time_daily_summary(worksheet, cursor, year, month, meal_types, LK):
     """Fill the Daily Summary worksheet for time-based report"""
     # Define headers
     columns = ["Date"] + meal_types + ["Total"]
@@ -1047,6 +1073,7 @@ def fill_time_daily_summary(worksheet, cursor, year, month, meal_types):
             COUNT(*) as Count
         FROM {DB_TABLE}
         WHERE YEAR(PunchDateTime) = %s AND MONTH(PunchDateTime) = %s
+        AND LicenseKey = %s
         GROUP BY DATE_FORMAT(PunchDateTime, '%d-%m-%Y'), 
             CASE 
                 WHEN HOUR(PunchDateTime) < 10 THEN 'Breakfast'
@@ -1056,7 +1083,7 @@ def fill_time_daily_summary(worksheet, cursor, year, month, meal_types):
         ORDER BY DATE(PunchDateTime)
     """
     
-    cursor.execute(query, (year, month))
+    cursor.execute(query, (year, month, LK))
     results = cursor.fetchall()
     
     # Process data by date
@@ -1126,7 +1153,7 @@ def fill_time_daily_summary(worksheet, cursor, year, month, meal_types):
         adjusted_width = max_length + 2
         worksheet.column_dimensions[column_letter].width = adjusted_width
 
-def fill_time_user_summary(worksheet, cursor, year, month, meal_types):
+def fill_time_user_summary(worksheet, cursor, year, month, meal_types, LK):
     """Fill the User Summary worksheet for time-based report"""
     # Define headers
     columns = ["Year", "Month", "PunchID", "Name"] + meal_types
@@ -1156,6 +1183,7 @@ def fill_time_user_summary(worksheet, cursor, year, month, meal_types):
             COUNT(*) as Count
         FROM {DB_TABLE}
         WHERE YEAR(PunchDateTime) = %s AND MONTH(PunchDateTime) = %s
+        AND LicenseKey = %s
         GROUP BY PunchCardNo, 
             CASE 
                 WHEN HOUR(PunchDateTime) < 10 THEN 'Breakfast'
@@ -1165,7 +1193,7 @@ def fill_time_user_summary(worksheet, cursor, year, month, meal_types):
         ORDER BY PunchCardNo
     """
     
-    cursor.execute(query, (year, month))
+    cursor.execute(query, (year, month, LK))
     results = cursor.fetchall()
     
     # Process data by user
@@ -1234,7 +1262,7 @@ def fill_time_user_summary(worksheet, cursor, year, month, meal_types):
         adjusted_width = max_length + 2
         worksheet.column_dimensions[column_letter].width = adjusted_width
 
-def fill_time_consumption_detail(worksheet, cursor, year, month, meal_types):
+def fill_time_consumption_detail(worksheet, cursor, year, month, meal_types, LK):
     """Fill the Consumption Detail worksheet for time-based report"""
     # Define headers - User, Date, Total, then day numbers 1-31
     columns = ["User", "Date", "Total"] + [str(i) for i in range(1, 32)]
@@ -1265,6 +1293,7 @@ def fill_time_consumption_detail(worksheet, cursor, year, month, meal_types):
             COUNT(*) as Count
         FROM {DB_TABLE}
         WHERE YEAR(PunchDateTime) = %s AND MONTH(PunchDateTime) = %s
+        AND LicenseKey = %s
         GROUP BY PunchCardNo, 
             CASE 
                 WHEN HOUR(PunchDateTime) < 10 THEN 'Breakfast'
@@ -1275,7 +1304,7 @@ def fill_time_consumption_detail(worksheet, cursor, year, month, meal_types):
         ORDER BY PunchCardNo, MealType, Day
     """
     
-    cursor.execute(query, (year, month))
+    cursor.execute(query, (year, month, LK))
     results = cursor.fetchall()
     
     # Process data by user and meal type
@@ -1352,7 +1381,7 @@ def fill_time_consumption_detail(worksheet, cursor, year, month, meal_types):
         adjusted_width = max_length + 2
         worksheet.column_dimensions[column_letter].width = adjusted_width
 
-def generate_timebase_monthly_report(year, month, report_type=None, output_dir="Reports/monthly", prompt_for_location=True):
+def generate_timebase_monthly_report(year, month, report_type=None, LK=None, output_dir="Reports/monthly", prompt_for_location=True):
     """
     Generate a monthly report similar to the timeBase.js format with three sheets:
     - Daily Summary: Shows counts by day
@@ -1398,11 +1427,11 @@ def generate_timebase_monthly_report(year, month, report_type=None, output_dir="
         # Generate the appropriate report based on type
         report_type = report_type.lower().strip()
         if report_type == "deviceoptions":
-            file_path = generate_device_report(workbook, year, month, month_number, output_dir, prompt_for_location)
+            file_path = generate_device_report(workbook, year, month, month_number, LK, output_dir, prompt_for_location)
         elif report_type == "timeoptions":
-            file_path = generate_time_report(workbook, year, month, month_number, output_dir, prompt_for_location)
+            file_path = generate_time_report(workbook, year, month, month_number, LK, output_dir, prompt_for_location)
         elif report_type == "menuoptions":
-            file_path = generate_menu_report(workbook, year, month, month_number, output_dir, prompt_for_location)
+            file_path = generate_menu_report(workbook, year, month, month_number, LK, output_dir, prompt_for_location)
         else:
             raise ValueError(f"Unknown report type: {report_type}")
             
@@ -1414,7 +1443,7 @@ def generate_timebase_monthly_report(year, month, report_type=None, output_dir="
         traceback.print_exc()
         return None
 
-def generate_menu_report(workbook, year, month, month_number, output_dir, prompt_for_location):
+def generate_menu_report(workbook, year, month, month_number, LK, output_dir, prompt_for_location):
     """Generate a menu-based monthly report with three worksheets"""
     try:
         # Create worksheets
@@ -1424,7 +1453,7 @@ def generate_menu_report(workbook, year, month, month_number, output_dir, prompt
         detail_worksheet = workbook.create_sheet("Consumption Detail")
         
         # Connect to database
-        conn = connect_to_database()
+        conn = connect_to_database(LK)
         if not conn:
             return None
             
@@ -1435,19 +1464,20 @@ def generate_menu_report(workbook, year, month, month_number, output_dir, prompt
             SELECT DISTINCT Fooditem 
             FROM {DB_TABLE}
             WHERE YEAR(PunchDateTime) = %s AND MONTH(PunchDateTime) = %s
+            AND LicenseKey = %s
             ORDER BY Fooditem
         """
-        cursor.execute(menu_items_query, (year, month))
+        cursor.execute(menu_items_query, (year, month, LK))
         menu_items = [row['Fooditem'] for row in cursor.fetchall()]
         
         # Fill Daily Summary worksheet
-        fill_menu_daily_summary(daily_worksheet, cursor, year, month, menu_items)
+        fill_menu_daily_summary(daily_worksheet, cursor, year, month, menu_items, LK)
         
         # Fill User Summary worksheet
-        fill_menu_user_summary(user_worksheet, cursor, year, month, menu_items)
+        fill_menu_user_summary(user_worksheet, cursor, year, month, menu_items, LK)
         
         # Fill Consumption Detail worksheet
-        fill_menu_consumption_detail(detail_worksheet, cursor, year, month, menu_items)
+        fill_menu_consumption_detail(detail_worksheet, cursor, year, month, menu_items, LK)
         
         # Close database connection
         cursor.close()
@@ -1474,7 +1504,7 @@ def generate_menu_report(workbook, year, month, month_number, output_dir, prompt
         traceback.print_exc()
         return None
 
-def fill_menu_daily_summary(worksheet, cursor, year, month, menu_items):
+def fill_menu_daily_summary(worksheet, cursor, year, month, menu_items, LK):
     """Fill the Daily Summary worksheet for menu-based report"""
     # Define headers
     columns = ["Date"] + menu_items + ["Total"]
@@ -1500,11 +1530,12 @@ def fill_menu_daily_summary(worksheet, cursor, year, month, menu_items):
             COUNT(*) as Count
         FROM {DB_TABLE}
         WHERE YEAR(PunchDateTime) = %s AND MONTH(PunchDateTime) = %s
+        AND LicenseKey = %s
         GROUP BY DATE_FORMAT(PunchDateTime, '%d-%m-%Y'), Fooditem
         ORDER BY DATE(PunchDateTime)
     """
     
-    cursor.execute(query, (year, month))
+    cursor.execute(query, (year, month, LK))
     results = cursor.fetchall()
     
     # Process data by date
@@ -1574,7 +1605,7 @@ def fill_menu_daily_summary(worksheet, cursor, year, month, menu_items):
         adjusted_width = max_length + 2
         worksheet.column_dimensions[column_letter].width = adjusted_width
 
-def fill_menu_user_summary(worksheet, cursor, year, month, menu_items):
+def fill_menu_user_summary(worksheet, cursor, year, month, menu_items, LK):
     """Fill the User Summary worksheet for menu-based report"""
     # Define headers
     columns = ["Year", "Month", "PunchID", "Name"] + menu_items
@@ -1600,11 +1631,12 @@ def fill_menu_user_summary(worksheet, cursor, year, month, menu_items):
             COUNT(*) as Count
         FROM {DB_TABLE}
         WHERE YEAR(PunchDateTime) = %s AND MONTH(PunchDateTime) = %s
+        AND LicenseKey = %s
         GROUP BY PunchCardNo, Fooditem
         ORDER BY PunchCardNo
     """
     
-    cursor.execute(query, (year, month))
+    cursor.execute(query, (year, month, LK))
     results = cursor.fetchall()
     
     # Process data by user
@@ -1673,7 +1705,7 @@ def fill_menu_user_summary(worksheet, cursor, year, month, menu_items):
         adjusted_width = max_length + 2
         worksheet.column_dimensions[column_letter].width = adjusted_width
 
-def fill_menu_consumption_detail(worksheet, cursor, year, month, menu_items):
+def fill_menu_consumption_detail(worksheet, cursor, year, month, menu_items, LK):
     """Fill the Consumption Detail worksheet for menu-based report"""
     # Define headers - Employee, Date, Total, then day numbers 1-31
     columns = ["Employee", "Date", "Total"] + [str(i) for i in range(1, 32)]
@@ -1700,11 +1732,12 @@ def fill_menu_consumption_detail(worksheet, cursor, year, month, menu_items):
             COUNT(*) as Count
         FROM {DB_TABLE}
         WHERE YEAR(PunchDateTime) = %s AND MONTH(PunchDateTime) = %s
+        AND LicenseKey = %s
         GROUP BY PunchCardNo, Fooditem, DAY(PunchDateTime)
         ORDER BY PunchCardNo, Fooditem, Day
     """
     
-    cursor.execute(query, (year, month))
+    cursor.execute(query, (year, month, LK))
     results = cursor.fetchall()
     
     # Process data by user and food item
@@ -1783,17 +1816,40 @@ def fill_menu_consumption_detail(worksheet, cursor, year, month, menu_items):
 
 # Example usage
 if __name__ == "__main__":
+    import asyncio
+    from licenseManager import LicenseManager
+
+    license_manager = LicenseManager()
+    def get_license_data():
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            license_data = loop.run_until_complete(license_manager.get_license_db())
+            return license_data
+        finally:
+            loop.close()
+
+
+    license_data = get_license_data()
+    print(f"\n\n\n\n\n\n")
+    print(license_data['LicenseKey'])
+    if license_data and 'LicenseKey' in license_data:
+        license_key = license_data['LicenseKey']
+        # print(f"Retrieved license key for database insertion: {license_key}")
+    # else:
+    #     print("Could not retrieve license key for database insertion")
+
     # Generate traditional reports for May 2025
     # generate_monthly_report(2025, 5)
-    generate_daily_report("2025-05-22")
-    generate_logs_report(2025, 5)
-    generate_fooditem_count_report()
+    generate_daily_report("2025-05-29", license_key)
+    generate_logs_report(2025, 5, license_key)
+    # generate_fooditem_count_report(license_key)
     
     # Generate timebase reports with different formats
     print("\n=== Generating TimeBase Format Reports ===")
     # Device-based report
-    generate_timebase_monthly_report(2025, 5, "deviceoptions", output_dir="Reports/monthly")
+    generate_timebase_monthly_report(2025, 5, report_type="deviceoptions", LK=license_key, output_dir="Reports/monthly")
     # Time-based report
-    generate_timebase_monthly_report(2025, 5, "timeoptions", output_dir="Reports/monthly")
+    generate_timebase_monthly_report(2025, 5, report_type="timeoptions", LK=license_key, output_dir="Reports/monthly")
     # Menu-based report
-    generate_timebase_monthly_report(2025, 5, "menuoptions", output_dir="Reports/monthly") 
+    generate_timebase_monthly_report(2025, 5, report_type="menuoptions", LK=license_key, output_dir="Reports/monthly") 

@@ -63,8 +63,16 @@ class DatabaseManager:
         except Error as e:
             print(f"Query execution error: {e}")
             return None
-            
+              
     def get_monthly_summary(self, month, year):
+        # Get license key from settings
+        with open('appSettings.json', 'r') as file:
+            all_settings = json.load(file)
+        license_key = all_settings.get('LicenseKey')
+        if not license_key:
+            print("License key not found in settings")
+            return None
+            
         query = """
         SELECT 
             DATE(PunchDateTime) as date,
@@ -75,12 +83,21 @@ class DatabaseManager:
         WHERE MONTH(PunchDateTime) = %s 
         AND YEAR(PunchDateTime) = %s 
         AND CanteenMode IS NOT NULL
+        AND LicenseKey = %s
         GROUP BY DATE(PunchDateTime), Fooditem, PunchCardNo
         ORDER BY date DESC
         """
-        return self.execute_query(query, (month, year))
+        return self.execute_query(query, (month, year, license_key))
         
     def get_daily_consumption(self):
+        # Get license key from settings
+        with open('appSettings.json', 'r') as file:
+            all_settings = json.load(file)
+        license_key = all_settings.get('LicenseKey')
+        if not license_key:
+            print("License key not found in settings")
+            return None
+            
         query = """
         SELECT 
             DATE(PunchDateTime) as date,
@@ -90,12 +107,21 @@ class DatabaseManager:
         FROM sequentiallog 
         WHERE DATE(PunchDateTime) = CURDATE()
         AND CanteenMode IS NOT NULL
+        AND LicenseKey = %s
         GROUP BY Fooditem
         ORDER BY total_items DESC
         """
-        return self.execute_query(query)
+        return self.execute_query(query, (license_key,))
         
     def get_canteen_logs(self, month, year):
+        # Get license key from settings
+        with open('appSettings.json', 'r') as file:
+            all_settings = json.load(file)
+        license_key = all_settings.get('LicenseKey')
+        if not license_key:
+            print("License key not found in settings")
+            return None
+            
         query = """
         SELECT 
             PunchCardNo,
@@ -108,11 +134,20 @@ class DatabaseManager:
         WHERE MONTH(PunchDateTime) = %s 
         AND YEAR(PunchDateTime) = %s 
         AND CanteenMode IS NOT NULL
+        AND LicenseKey = %s
         ORDER BY PunchDateTime DESC
         """
-        return self.execute_query(query, (month, year))
+        return self.execute_query(query, (month, year, license_key))
         
     def get_statistics(self, month, year):
+        # Get license key from settings
+        with open('appSettings.json', 'r') as file:
+            all_settings = json.load(file)
+        license_key = all_settings.get('LicenseKey')
+        if not license_key:
+            print("License key not found in settings")
+            return None
+            
         query = """
         SELECT 
             COUNT(*) as total_transactions,
@@ -123,8 +158,9 @@ class DatabaseManager:
         WHERE MONTH(PunchDateTime) = %s 
         AND YEAR(PunchDateTime) = %s 
         AND CanteenMode IS NOT NULL
+        AND LicenseKey = %s
         """
-        return self.execute_query(query, (month, year))
+        return self.execute_query(query, (month, year, license_key))
 
 
 class ModernSpinner(QWidget):

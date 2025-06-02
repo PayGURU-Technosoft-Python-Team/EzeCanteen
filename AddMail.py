@@ -15,6 +15,9 @@ from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
 from datetime import datetime, timedelta
 import reportGen
+import asyncio
+import logging
+from licenseManager import LicenseManager
 
 def send_daily_report_email(date=None):
     """
@@ -57,9 +60,36 @@ def send_daily_report_email(date=None):
         if not smtp_server or not smtp_port or not smtp_user or not smtp_pass or not to_emails:
             print("Incomplete mail settings")
             return False
+              
+        # Get license key directly from database
+        license_key = ""
+        try:
+            # Create a license manager instance
+            license_manager = LicenseManager()
+            
+            # We need to run the async method in a synchronous context
+            def get_license_data():
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    license_data = loop.run_until_complete(license_manager.get_license_db())
+                    return license_data
+                finally:
+                    loop.close()
+            
+            # Get license data and extract the key
+            license_data = get_license_data()
+            if license_data and 'LicenseKey' in license_data:
+                license_key = license_data['LicenseKey']
+                logging.info(f"Retrieved license key for database insertion: {license_key}")
+            else:
+                logging.warning("Could not retrieve license key for database insertion")
+        except Exception as e:
+            logging.error(f"Error getting license key: {e}")
+            return False
             
         # Generate daily report
-        report_path = reportGen.generate_daily_report(date)
+        report_path = reportGen.generate_daily_report(date, license_key)
         if not report_path or not os.path.exists(report_path):
             print(f"Failed to generate report for {date}")
             return False
@@ -205,8 +235,35 @@ def send_monthly_report_email(year=None, month=None):
             print("Incomplete mail settings")
             return False
             
+        # Get license key directly from database
+        license_key = ""
+        try:
+            # Create a license manager instance
+            license_manager = LicenseManager()
+            
+            # We need to run the async method in a synchronous context
+            def get_license_data():
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    license_data = loop.run_until_complete(license_manager.get_license_db())
+                    return license_data
+                finally:
+                    loop.close()
+            
+            # Get license data and extract the key
+            license_data = get_license_data()
+            if license_data and 'LicenseKey' in license_data:
+                license_key = license_data['LicenseKey']
+                logging.info(f"Retrieved license key for database insertion: {license_key}")
+            else:
+                logging.warning("Could not retrieve license key for database insertion")
+        except Exception as e:
+            logging.error(f"Error getting license key: {e}")
+            return False
+            
         # Generate monthly report using timebase format
-        report_path = reportGen.generate_timebase_monthly_report(year, month, "deviceoptions", output_dir="Reports/monthly", prompt_for_location=False)
+        report_path = reportGen.generate_timebase_monthly_report(year, month, "deviceoptions", LK=license_key, output_dir="Reports/monthly", prompt_for_location=False)
         if not report_path or not os.path.exists(report_path):
             print(f"Failed to generate report for {month}/{year}")
             return False
@@ -424,32 +481,59 @@ def send_combined_reports_email(date=None):
             print("Incomplete mail settings")
             return False
         
+        # Get license key directly from database
+        license_key = ""
+        try:
+            # Create a license manager instance
+            license_manager = LicenseManager()
+            
+            # We need to run the async method in a synchronous context
+            def get_license_data():
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    license_data = loop.run_until_complete(license_manager.get_license_db())
+                    return license_data
+                finally:
+                    loop.close()
+            
+            # Get license data and extract the key
+            license_data = get_license_data()
+            if license_data and 'LicenseKey' in license_data:
+                license_key = license_data['LicenseKey']
+                logging.info(f"Retrieved license key for database insertion: {license_key}")
+            else:
+                logging.warning("Could not retrieve license key for database insertion")
+        except Exception as e:
+            logging.error(f"Error getting license key: {e}")
+            return False
+        
         # Generate all reports
         report_paths = []
         
         # 1. Generate daily report
-        daily_report_path = reportGen.generate_daily_report(date)
+        daily_report_path = reportGen.generate_daily_report(date, license_key)
         if daily_report_path and os.path.exists(daily_report_path):
             report_paths.append(daily_report_path)
         else:
             print(f"Failed to generate daily report for {date}")
         
         # 2. Generate device-based monthly report
-        device_report_path = reportGen.generate_timebase_monthly_report(year, month, "deviceoptions", output_dir="Reports/monthly", prompt_for_location=False)
+        device_report_path = reportGen.generate_timebase_monthly_report(year, month, "deviceoptions", LK=license_key, output_dir="Reports/monthly", prompt_for_location=False)
         if device_report_path and os.path.exists(device_report_path):
             report_paths.append(device_report_path)
         else:
             print(f"Failed to generate device-based report for {month}/{year}")
         
         # 3. Generate time-based monthly report
-        time_report_path = reportGen.generate_timebase_monthly_report(year, month, "timeoptions", output_dir="Reports/monthly", prompt_for_location=False)
+        time_report_path = reportGen.generate_timebase_monthly_report(year, month, "timeoptions", LK=license_key, output_dir="Reports/monthly", prompt_for_location=False)
         if time_report_path and os.path.exists(time_report_path):
             report_paths.append(time_report_path)
         else:
             print(f"Failed to generate time-based report for {month}/{year}")
         
         # 4. Generate menu-based monthly report
-        menu_report_path = reportGen.generate_timebase_monthly_report(year, month, "menuoptions", output_dir="Reports/monthly", prompt_for_location=False)
+        menu_report_path = reportGen.generate_timebase_monthly_report(year, month, "menuoptions", LK=license_key, output_dir="Reports/monthly", prompt_for_location=False)
         if menu_report_path and os.path.exists(menu_report_path):
             report_paths.append(menu_report_path)
         else:
