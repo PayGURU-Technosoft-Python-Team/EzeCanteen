@@ -2099,7 +2099,7 @@ class EzeeCanteen(QMainWindow):
         footer_label = QLabel("Developed by PayGURU Technosoft Pvt. Ltd.")
         footer_label.setStyleSheet("color: #bdc3c7; font-size: 12px; background: transparent;")
         footer_label.setAlignment(Qt.AlignCenter)
-        
+    dadsad
         footer_layout.addStretch()
         footer_layout.addWidget(footer_label)
         footer_layout.addStretch()
