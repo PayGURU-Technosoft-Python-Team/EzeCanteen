@@ -805,11 +805,10 @@ class AuthEventMonitor(QThread):
                     }
                     
                     # Make the request with increased timeout
-                    print("2222222222222")
                     # self.password = self.password.decode('utf-8')
                     # self.password = "a1234@4321"
-                    print({self.username})
-                    print({self.password})
+                    # print({self.username})
+                    # print({self.password})
                     response = requests.post(
                         self.url,
                         json=payload,
@@ -2121,7 +2120,10 @@ class EzeeCanteen(QMainWindow):
         # Add event to the list
         if(event_data.get('employeeNoString')):
             print(f"event_data{event_data}\n\n")
-            self.events.insert(0, event_data)
+            # Add event to the end of list, then sort by time
+            self.events.append(event_data)
+            # Sort events by time in descending order (most recent first)
+            self.events.sort(key=lambda event: event.get('time', ''), reverse=True)
             
             # Process disable punch logic - check if DisablePunch is enabled
             try:
@@ -2322,56 +2324,14 @@ class EzeeCanteen(QMainWindow):
             if not hasattr(self, 'grid_layout') or sip.isdeleted(self.grid_layout):
                 return
             
-            # Determine number of columns based on window width
-            window_width = self.width()
-            
-            # Determine columns based on window width - adjusted to fit more items
-            if window_width >= 1600:
-                cols = 7  # More columns for very wide windows
-            elif window_width >= 1280:
-                cols = 6  # 6 columns in wide window
-            elif window_width >= 900:
-                cols = 5  # 5 columns in medium window
-            elif window_width >= 768:
-                cols = 4  # 4 columns in smaller medium window
-            else:
-                cols = 3  # 3 columns in small window
-            
-            # Create new event item
-            new_event_item = AuthEventItem(event_data)
-            
-            # Shift all existing items in the grid one position
-            total_items = self.grid_layout.count()
-            if total_items > 0:
-                # Start from the last item and move each item one position forward
-                for i in range(total_items - 1, -1, -1):
-                    item = self.grid_layout.itemAt(i)
-                    if item and item.widget():
-                        old_row = i // cols
-                        old_col = i % cols
-                        new_row = (i + 1) // cols
-                        new_col = (i + 1) % cols
-                        
-                        # If we've reached the max events limit, remove the last widget
-                        if i == total_items - 1 and total_items >= self.max_events:
-                            widget = self.grid_layout.itemAt(i).widget()
-                            self.grid_layout.removeItem(item)
-                            if widget:
-                                widget.deleteLater()
-                        else:
-                            # Move widget to new position
-                            widget = item.widget()
-                            self.grid_layout.removeItem(item)
-                            self.grid_layout.addWidget(widget, new_row, new_col)
-                            self.grid_layout.setAlignment(widget, Qt.AlignTop | Qt.AlignLeft)
-            
-            # Add the new item at the first position
-            self.grid_layout.addWidget(new_event_item, 0, 0)
-            self.grid_layout.setAlignment(new_event_item, Qt.AlignTop | Qt.AlignLeft)
-            
             # Limit the number of events
             if len(self.events) > self.max_events:
                 self.events = self.events[:self.max_events]
+                
+            # Instead of shifting items in the grid one by one,
+            # simply clear and repopulate the entire grid to maintain sorted order
+            self.clear_grid()
+            self.populate_grid()
         
             # Print to console for debugging
             print("\n========== NEW AUTHENTICATION ==========")
@@ -2674,6 +2634,9 @@ class EzeeCanteen(QMainWindow):
         if not hasattr(self, 'grid_layout') or sip.isdeleted(self.grid_layout):
             return
             
+        # Sort events by time in descending order (most recent first)
+        sorted_events = sorted(self.events, key=lambda event: event.get('time', ''), reverse=True)
+            
         # Determine number of columns based on window width
         window_width = self.width()
         
@@ -2693,8 +2656,8 @@ class EzeeCanteen(QMainWindow):
         self.grid_layout.setSpacing(4)
         self.grid_layout.setAlignment(Qt.AlignTop | Qt.AlignLeft)  # Ensure top-left alignment
         
-        # Populate grid
-        for i, event in enumerate(self.events):
+        # Populate grid with sorted events
+        for i, event in enumerate(sorted_events):
             row = i // cols
             col = i % cols
             

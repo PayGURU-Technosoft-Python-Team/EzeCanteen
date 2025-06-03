@@ -942,7 +942,7 @@ class PrinterSetupWindow(QMainWindow):
     def get_next_device_number(self, cursor, device_type):
         """Get the next available device number"""
         try:
-            cursor.execute("SELECT MAX(DeviceNumber) FROM configh WHERE DeviceType = %s AND LicenseKey = '{self.license_Key}", (device_type,))
+            cursor.execute("SELECT MAX(DeviceNumber) FROM configh WHERE DeviceType = %s AND LicenseKey = %s", (device_type, self.license_key))
             result = cursor.fetchone()
             max_num = result[0] if result[0] is not None else 0
             return max_num + 1
@@ -996,7 +996,7 @@ class PrinterSetupWindow(QMainWindow):
                     Port = %s,
                     DeviceLocation = %s,
                     Enable = %s
-                WHERE DeviceType = %s AND DeviceNumber = %s AND LicenseKey = '{self.license_key}'
+                WHERE DeviceType = %s AND DeviceNumber = %s AND LicenseKey = %s
                 """
                 print("location ->>>>>>>>",location)
 
@@ -1007,7 +1007,8 @@ class PrinterSetupWindow(QMainWindow):
                     location,
                     enable_value,
                     printer_name,  # Use name as DeviceType
-                    device_number
+                    device_number,
+                    self.license_key
                 )
                 
                 cursor.execute(sql, values)
