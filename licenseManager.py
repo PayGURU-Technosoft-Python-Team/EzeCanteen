@@ -520,7 +520,7 @@ class LicenseApp:
             python_executable = sys.executable
             subprocess.Popen([python_executable, settings_path])
         else:
-            messagebox.showerror("Error", f"Could not find settings.py in {current_dir}")
+            messagebox.showerror("LicenseManager", f"You now have a valid license. You may now have permission to start the application.")
     
     def run(self):
         """Start the application"""
@@ -569,7 +569,7 @@ def main():
                     python_executable = sys.executable
                     subprocess.Popen([python_executable, settings_path])
                 else:
-                    messagebox.showerror("Error", f"Could not find settings.py in {current_dir}")
+                    messagebox.showerror("LicenseManager", f"You now have a valid license. You may now have permission to start the application.")
                 return
             else:
                 # License is invalid, show the license UI

@@ -293,6 +293,8 @@ class ReportsWindow(QMainWindow):
         title_label = QLabel("Reports")
         title_label.setAlignment(Qt.AlignCenter)
         title_label.setFont(QFont("Arial", 26, QFont.Bold))
+        title_label.setStyleSheet("font-size: 30px; color: white; margin: 10px;")
+        title_label.setMinimumHeight(80)
         title_layout.addWidget(title_label)
         main_layout.addWidget(title_frame)
         

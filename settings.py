@@ -17,6 +17,7 @@ from AddMail import send_daily_report_email
 import threading
 import time
 import logging
+import shutil
 
 # Database configuration
 DB_HOST = "103.216.211.36"
@@ -149,6 +150,8 @@ class EzeeCanteenWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("EzeeCanteen")
         self.setGeometry(100, 100, 1024, 900)
+        # Set window to full screen mode
+        self.setWindowState(Qt.WindowFullScreen)
         self.printers = []
         self.devices = []
         self.port_number = ""
@@ -581,6 +584,22 @@ class EzeeCanteenWindow(QMainWindow):
         meal_button.clicked.connect(self.meal_settings)
         button_layout.addWidget(meal_button)
         
+        # Add close button
+        close_button = QPushButton("Exit")
+        close_button.setStyleSheet("""
+            QPushButton {
+                background-color: #dc2626;
+                color: white;
+                padding: 8px 24px;
+                border-radius: 4px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #b91c1c;
+            }
+        """)
+        close_button.clicked.connect(self.close)
+        button_layout.addWidget(close_button)
         
         button_group.setLayout(button_layout)
         header_layout.addWidget(button_group, alignment=Qt.AlignRight)
@@ -2500,6 +2519,31 @@ class EzeeCanteenWindow(QMainWindow):
             
         if hasattr(self, 'auto_mail_timer') and self.auto_mail_timer:
             self.auto_mail_timer.stop()
+        
+        # Clear the local/temp/EzeeCanteen folder
+        try:
+            import os
+            import shutil
+            temp_folder = os.path.join(os.path.expanduser('~'), 'AppData', 'local', 'temp', 'ezecanteen_images')
+            
+            if os.path.exists(temp_folder) and os.path.isdir(temp_folder):
+                print(f"Cleaning up temp folder: {temp_folder}")
+                # Remove all files and subdirectories in the folder
+                for item in os.listdir(temp_folder):
+                    item_path = os.path.join(temp_folder, item)
+                    try:
+                        if os.path.isfile(item_path):
+                            os.unlink(item_path)
+                        elif os.path.isdir(item_path):
+                            shutil.rmtree(item_path)
+                        print(f"Removed: {item_path}")
+                    except Exception as e:
+                        print(f"Error removing {item_path}: {e}")
+                print("Temp folder cleanup complete")
+            else:
+                print(f"Temp folder not found: {temp_folder}")
+        except Exception as e:
+            print(f"Error during temp folder cleanup: {e}")
             
         # Accept the close event
         event.accept()
@@ -2719,7 +2763,7 @@ if __name__ == '__main__':
             print("Testing database connection...")
             window.test_connection()
         
-        window.show()
+        window.showFullScreen()  # Show in full screen mode instead of normal
         sys.exit(app.exec_())
     else:
         # License is invalid, open license UI
@@ -2760,7 +2804,9 @@ else:
         # Check license
         license_result = check_license()
         if license_result.get('isValid', False):
-            return EzeeCanteenWindow(license_key)
+            window = EzeeCanteenWindow(license_key)
+            window.showFullScreen()  # Ensure full screen when imported
+            return window
         else:
             print(f"License is not valid: {license_result.get('message', 'Unknown error')}. Cannot open main application.")
             return None
