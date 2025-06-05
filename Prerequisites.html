@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EzeeCanteen - Prerequisites & System Requirements</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+            animation: fadeInDown 1s ease-out;
+        }
+
+        .header h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header .subtitle {
+            font-size: 1.3rem;
+            opacity: 0.9;
+            font-weight: 300;
+        }
+
+        .requirements-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .requirement-card {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .requirement-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+        }
+
+        .requirement-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 25px 50px rgba(0,0,0,0.15);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .card-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 20px;
+            color: white;
+            font-size: 1.8rem;
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .card-title {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .requirement-item {
+            display: flex;
+            align-items: flex-start;
+            margin: 15px 0;
+            padding: 15px;
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+
+        .requirement-item:hover {
+            background: linear-gradient(135deg, #e8f2ff, #f0f8ff);
+            border-left-color: #667eea;
+            transform: translateX(5px);
+        }
+
+        .req-icon {
+            width: 24px;
+            height: 24px;
+            background: #667eea;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            color: white;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .req-content {
+            flex: 1;
+        }
+
+        .req-label {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 5px;
+            font-size: 1.05rem;
+        }
+
+        .req-description {
+            color: #555;
+            line-height: 1.6;
+            font-size: 0.95rem;
+        }
+
+        .critical-note {
+            background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+            border: 2px solid #f39c12;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 30px 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .critical-note::before {
+            content: '⚠️';
+            position: absolute;
+            top: -10px;
+            right: 20px;
+            font-size: 3rem;
+            opacity: 0.3;
+        }
+
+        .critical-note h3 {
+            color: #e67e22;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .critical-note p {
+            color: #8b4513;
+            line-height: 1.6;
+            margin: 10px 0;
+        }
+
+        .success-tip {
+            background: linear-gradient(135deg, #d4edda, #c3e6cb);
+            border: 2px solid #28a745;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 30px 0;
+            position: relative;
+        }
+
+        .success-tip::before {
+            content: '💡';
+            position: absolute;
+            top: -10px;
+            right: 20px;
+            font-size: 3rem;
+            opacity: 0.3;
+        }
+
+        .success-tip h3 {
+            color: #155724;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+
+        .success-tip p {
+            color: #155724;
+            line-height: 1.6;
+        }
+
+        .checklist {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 30px;
+            margin: 30px 0;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+        }
+
+        .checklist-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .checklist-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #28a745, #20c997);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            color: white;
+            font-size: 1.5rem;
+        }
+
+        .checklist-title {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .checklist-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f0f0;
+            transition: all 0.3s ease;
+        }
+
+        .checklist-item:last-child {
+            border-bottom: none;
+        }
+
+        .checklist-item:hover {
+            background: #f8f9fa;
+            padding-left: 15px;
+            border-radius: 8px;
+        }
+
+        .checkbox {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #667eea;
+            border-radius: 4px;
+            margin-right: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .checkbox.checked {
+            background: #667eea;
+            color: white;
+        }
+
+        .checkbox:hover {
+            background: rgba(102, 126, 234, 0.1);
+            transform: scale(1.1);
+        }
+
+        .compatibility-matrix {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 30px;
+            margin: 30px 0;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+        }
+
+        .matrix-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        .matrix-table th,
+        .matrix-table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .matrix-table th {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            font-weight: 600;
+        }
+
+        .matrix-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .status-supported {
+            color: #28a745;
+            font-weight: 600;
+        }
+
+        .status-not-supported {
+            color: #dc3545;
+            font-weight: 600;
+        }
+
+        .footer {
+            text-align: center;
+            color: white;
+            margin-top: 50px;
+            padding: 30px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(102, 126, 234, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(102, 126, 234, 0); }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 { font-size: 2.5rem; }
+            .requirements-grid { grid-template-columns: 1fr; }
+            .card-icon { width: 50px; height: 50px; font-size: 1.5rem; }
+            .card-title { font-size: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔧 EzeeCanteen Prerequisites</h1>
+            <div class="subtitle">System Requirements & Setup Checklist</div>
+        </div>
+
+        <div class="requirements-grid">
+            <!-- System Requirements -->
+            <div class="requirement-card">
+                <div class="card-header">
+                    <div class="card-icon">💻</div>
+                    <div class="card-title">System Requirements</div>
+                </div>
+                
+                <div class="requirement-item">
+                    <div class="req-icon">OS</div>
+                    <div class="req-content">
+                        <div class="req-label">Operating System</div>
+                        <div class="req-description">Windows 10 or newer (Windows 11 recommended)</div>
+                    </div>
+                </div>
+
+                <div class="requirement-item">
+                    <div class="req-icon">💾</div>
+                    <div class="req-content">
+                        <div class="req-label">Storage Space</div>
+                        <div class="req-description">Minimum 500MB free disk space for installation</div>
+                    </div>
+                </div>
+
+                <div class="requirement-item">
+                    <div class="req-icon">🖥️</div>
+                    <div class="req-content">
+                        <div class="req-label">Display Resolution</div>
+                        <div class="req-description">1366x768 minimum (1920x1080 recommended)</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Network Requirements -->
+            <div class="requirement-card">
+                <div class="card-header">
+                    <div class="card-icon">🌐</div>
+                    <div class="card-title">Network Requirements</div>
+                </div>
+                
+                <div class="requirement-item">
+                    <div class="req-icon">🔗</div>
+                    <div class="req-content">
+                        <div class="req-label">Internet Connection</div>
+                        <div class="req-description">Active internet for database connectivity and updates</div>
+                    </div>
+                </div>
+
+                <div class="requirement-item">
+                    <div class="req-icon">🏠</div>
+                    <div class="req-content">
+                        <div class="req-label">Local Network</div>
+                        <div class="req-description">Stable LAN for printer and device communication</div>
+                    </div>
+                </div>
+
+                <div class="requirement-item">
+                    <div class="req-icon">📡</div>
+                    <div class="req-content">
+                        <div class="req-label">Network Topology</div>
+                        <div class="req-description">All devices must be on the same network subnet</div>
+                    </div>
+                </div>
+
+                <div class="requirement-item">
+                    <div class="req-icon">🛡️</div>
+                    <div class="req-content">
+                        <div class="req-label">Firewall Configuration</div>
+                        <div class="req-description">Firewall exceptions for application ports</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Database Requirements -->
+            <div class="requirement-card">
+                <div class="card-header">
+                    <div class="card-icon">🗄️</div>
+                    <div class="card-title">Database Requirements</div>
+                </div>
+                
+                <div class="requirement-item">
+                    <div class="req-icon">⚙️</div>
+                    <div class="req-content">
+                        <div class="req-label">Database Driver</div>
+                        <div class="req-description">Latest database driver installed and configured</div>
+                    </div>
+                </div>
+
+                <div class="requirement-item">
+                    <div class="req-icon">🔄</div>
+                    <div class="req-content">
+                        <div class="req-label">Driver Updates</div>
+                        <div class="req-description">Keep drivers up-to-date for optimal performance</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hardware Requirements -->
+            <div class="requirement-card">
+                <div class="card-header">
+                    <div class="card-icon">🖨️</div>
+                    <div class="card-title">Hardware Requirements</div>
+                </div>
+                
+                <div class="requirement-item">
+                    <div class="req-icon">🧾</div>
+                    <div class="req-content">
+                        <div class="req-label">Receipt Printers</div>
+                        <div class="req-description">Compatible thermal receipt printers with network connectivity</div>
+                    </div>
+                </div>
+
+                <div class="requirement-item">
+                    <div class="req-icon">📱</div>
+                    <div class="req-content">
+                        <div class="req-label">Display Devices</div>
+                        <div class="req-description">Network-enabled display devices for kitchen/counter use</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Critical Notes -->
+        <div class="critical-note">
+            <h3>⚠️ Critical Setup Notes</h3>
+            <p><strong>Network Configuration:</strong> Ensure all devices (printers, displays, terminals) are connected to the same local network before installation.</p>
+            <p><strong>Administrator Rights:</strong> The application must be run with administrator privileges for proper hardware access and configuration.</p>
+            <p><strong>Firewall Settings:</strong> Configure Windows Firewall to allow EzeeCanteen through both private and public networks.</p>
+        </div>
+
+        <!-- Pre-Installation Checklist -->
+        <div class="checklist">
+            <div class="checklist-header">
+                <div class="checklist-icon">✅</div>
+                <div class="checklist-title">Pre-Installation Checklist</div>
+            </div>
+            
+            <div class="checklist-item" onclick="toggleCheck(this)">
+                <div class="checkbox"></div>
+                <span>Windows 10/11 installed and updated</span>
+            </div>
+            
+            <div class="checklist-item" onclick="toggleCheck(this)">
+                <div class="checkbox"></div>
+                <span>500MB+ free disk space available</span>
+            </div>
+            
+            <div class="checklist-item" onclick="toggleCheck(this)">
+                <div class="checkbox"></div>
+                <span>Active internet connection verified</span>
+            </div>
+            
+            <div class="checklist-item" onclick="toggleCheck(this)">
+                <div class="checkbox"></div>
+                <span>Local network setup and tested</span>
+            </div>
+            
+            <div class="checklist-item" onclick="toggleCheck(this)">
+                <div class="checkbox"></div>
+                <span>All devices connected to same network</span>
+            </div>
+            
+            <div class="checklist-item" onclick="toggleCheck(this)">
+                <div class="checkbox"></div>
+                <span>Database drivers installed/updated</span>
+            </div>
+            
+            <div class="checklist-item" onclick="toggleCheck(this)">
+                <div class="checkbox"></div>
+                <span>Compatible printers configured</span>
+            </div>
+            
+            <div class="checklist-item" onclick="toggleCheck(this)">
+                <div class="checkbox"></div>
+                <span>Firewall exceptions configured</span>
+            </div>
+            
+            <div class="checklist-item" onclick="toggleCheck(this)">
+                <div class="checkbox"></div>
+                <span>Administrator access available</span>
+            </div>
+        </div>
+
+        <!-- Compatibility Matrix -->
+        <div class="compatibility-matrix">
+            <div class="checklist-header">
+                <div class="checklist-icon">🔄</div>
+                <div class="checklist-title">Compatibility Matrix</div>
+            </div>
+            
+            <table class="matrix-table">
+                <thead>
+                    <tr>
+                        <th>Component</th>
+                        <th>Minimum Requirement</th>
+                        <th>Recommended</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Windows Version</strong></td>
+                        <td>Windows 10</td>
+                        <td>Windows 11</td>
+                        <td><span class="status-supported">✅ Supported</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>RAM</strong></td>
+                        <td>4GB</td>
+                        <td>8GB+</td>
+                        <td><span class="status-supported">✅ Supported</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Storage</strong></td>
+                        <td>500MB</td>
+                        <td>2GB+ (for logs/reports)</td>
+                        <td><span class="status-supported">✅ Supported</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Network Speed</strong></td>
+                        <td>10 Mbps</td>
+                        <td>100 Mbps</td>
+                        <td><span class="status-supported">✅ Supported</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Printer Protocol</strong></td>
+                        <td>Ethernet/WiFi</td>
+                        <td>Ethernet (wired)</td>
+                        <td><span class="status-supported">✅ Supported</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Success Tips -->
+        <div class="success-tip">
+            <h3>💡 Pro Installation Tips</h3>
+            <p><strong>Network Setup:</strong> Use wired connections for printers when possible to ensure reliable communication.</p>
+            <p><strong>Testing:</strong> Test all network devices before installation to avoid configuration issues.</p>
+            <p><strong>Backup:</strong> Keep installation files and license information in a secure location for future reference.</p>
+        </div>
+
+        <div class="footer">
+            <h3>🚀 Ready to Install EzeeCanteen?</h3>
+            <p>Ensure all prerequisites are met before proceeding with installation</p>
+            <p><strong>PayGURU Technosoft Pvt. Ltd.</strong> - Streamlining canteen operations</p>
+        </div>
+    </div>
+
+    <script>
+        function toggleCheck(element) {
+            const checkbox = element.querySelector('.checkbox');
+            checkbox.classList.toggle('checked');
+            if (checkbox.classList.contains('checked')) {
+                checkbox.innerHTML = '✓';
+            } else {
+                checkbox.innerHTML = '';
+            }
+        }
+
+        // Add animation on scroll
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('.requirement-card, .checklist, .compatibility-matrix');
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.animation = 'fadeIn 0.6s ease-out';
+                    }
+                });
+            });
+            
+            cards.forEach(card => observer.observe(card));
+        });
+
+        // Add progress tracking
+        function updateProgress() {
+            const checkboxes = document.querySelectorAll('.checkbox.checked');
+            const total = document.querySelectorAll('.checkbox').length;
+            const progress = (checkboxes.length / total) * 100;
+            
+            if (progress === 100) {
+                document.querySelector('.footer h3').innerHTML = '🎉 All Prerequisites Complete!';
+                document.querySelector('.footer p').innerHTML = 'You are ready to proceed with EzeeCanteen installation';
+            }
+        }
+
+        // Add click listeners to all checklist items
+        document.querySelectorAll('.checklist-item').forEach(item => {
+            item.addEventListener('click', function() {
+                setTimeout(updateProgress, 100);
+            });
+        });
+    </script>
+</body>
+</html>

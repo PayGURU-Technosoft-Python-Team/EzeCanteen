@@ -150,8 +150,8 @@ class EzeeCanteenWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("EzeeCanteen")
         self.setGeometry(100, 100, 1024, 900)
-        # Set window to full screen mode
-        self.setWindowState(Qt.WindowFullScreen)
+        # Set window to maximized mode instead of full screen
+        self.setWindowState(Qt.WindowMaximized)
         self.printers = []
         self.devices = []
         self.port_number = ""
@@ -583,23 +583,6 @@ class EzeeCanteenWindow(QMainWindow):
         """)
         meal_button.clicked.connect(self.meal_settings)
         button_layout.addWidget(meal_button)
-        
-        # Add close button
-        close_button = QPushButton("Exit")
-        close_button.setStyleSheet("""
-            QPushButton {
-                background-color: #dc2626;
-                color: white;
-                padding: 8px 24px;
-                border-radius: 4px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #b91c1c;
-            }
-        """)
-        close_button.clicked.connect(self.close)
-        button_layout.addWidget(close_button)
         
         button_group.setLayout(button_layout)
         header_layout.addWidget(button_group, alignment=Qt.AlignRight)
@@ -2763,7 +2746,7 @@ if __name__ == '__main__':
             print("Testing database connection...")
             window.test_connection()
         
-        window.showFullScreen()  # Show in full screen mode instead of normal
+        window.showMaximized()  # Show in maximized mode instead of full screen
         sys.exit(app.exec_())
     else:
         # License is invalid, open license UI
@@ -2805,7 +2788,7 @@ else:
         license_result = check_license()
         if license_result.get('isValid', False):
             window = EzeeCanteenWindow(license_key)
-            window.showFullScreen()  # Ensure full screen when imported
+            window.showMaximized()  # Ensure maximized mode when imported
             return window
         else:
             print(f"License is not valid: {license_result.get('message', 'Unknown error')}. Cannot open main application.")

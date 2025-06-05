@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EzeeCanteen - Standard Operating Procedure</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+            animation: fadeInDown 1s ease-out;
+        }
+
+        .header h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header .subtitle {
+            font-size: 1.3rem;
+            opacity: 0.9;
+            font-weight: 300;
+        }
+
+        .nav-pills {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .nav-pill {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.3);
+            font-weight: 500;
+        }
+
+        .nav-pill:hover, .nav-pill.active {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        }
+
+        .content-section {
+            display: none;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .content-section.active {
+            display: block;
+        }
+
+        .card {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 25px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .card-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            color: white;
+            font-size: 1.5rem;
+        }
+
+        .card-title {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .step {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 0 10px 10px 0;
+            transition: all 0.3s ease;
+        }
+
+        .step:hover {
+            background: #e8f2ff;
+            transform: translateX(5px);
+        }
+
+        .step-number {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 30px;
+            font-weight: bold;
+            margin-right: 15px;
+        }
+
+        .step-title {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .step-content {
+            color: #555;
+            line-height: 1.6;
+        }
+
+        .step-content ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+
+        .step-content li {
+            margin: 8px 0;
+            position: relative;
+        }
+
+        .step-content li::marker {
+            color: #667eea;
+        }
+
+        .alert {
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .alert-info {
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+            border-left: 4px solid #2196f3;
+            color: #0d47a1;
+        }
+
+        .alert-warning {
+            background: linear-gradient(135deg, #fff3e0, #ffcc80);
+            border-left: 4px solid #ff9800;
+            color: #e65100;
+        }
+
+        .alert-success {
+            background: linear-gradient(135deg, #e8f5e8, #c8e6c9);
+            border-left: 4px solid #4caf50;
+            color: #1b5e20;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-online {
+            background: #4caf50;
+            box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+        }
+
+        .status-offline {
+            background: #f44336;
+            box-shadow: 0 0 10px rgba(244, 67, 54, 0.5);
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .feature-item {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .feature-item:hover {
+            border-color: #667eea;
+            transform: translateY(-3px);
+            background: linear-gradient(135deg, #fff, #f8f9fa);
+        }
+
+        .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            color: #667eea;
+        }
+
+        .footer {
+            text-align: center;
+            color: white;
+            margin-top: 50px;
+            padding: 30px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(102, 126, 234, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(102, 126, 234, 0); }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 { font-size: 2.5rem; }
+            .nav-pills { flex-direction: column; align-items: center; }
+            .card { padding: 20px; }
+            .feature-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🍽️ EzeeCanteen</h1>
+            <div class="subtitle">Standard Operating Procedure & Setup Guide</div>
+        </div>
+
+        <div class="nav-pills">
+            <div class="nav-pill active" onclick="showSection('installation')">📦 Installation</div>
+            <div class="nav-pill" onclick="showSection('license')">🔐 License</div>
+            <div class="nav-pill" onclick="showSection('settings')">⚙️ Settings</div>
+            <div class="nav-pill" onclick="showSection('operations')">🚀 Operations</div>
+            <div class="nav-pill" onclick="showSection('support')">🛟 Support</div>
+        </div>
+
+        <!-- Installation Section -->
+        <div id="installation" class="content-section active">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">📦</div>
+                    <div class="card-title">Installation Process</div>
+                </div>
+                
+                <div class="step">
+                    <span class="step-number">1</span>
+                    <div class="step-title">Extract Application</div>
+                    <div class="step-content">
+                        Download and unzip the provided EzeeCanteen zip file to your desired location.
+                    </div>
+                </div>
+
+                <div class="step">
+                    <span class="step-number">2</span>
+                    <div class="step-title">Launch Application</div>
+                    <div class="step-content">
+                        Right-click the EXE file and select <strong>"Run as Administrator"</strong> to ensure proper permissions.
+                    </div>
+                </div>
+
+                <div class="alert alert-info">
+                    <strong>💡 Pro Tip:</strong> Always run as administrator to avoid permission issues with printer and device configurations.
+                </div>
+            </div>
+        </div>
+
+        <!-- License Section -->
+        <div id="license" class="content-section">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🔐</div>
+                    <div class="card-title">License Activation</div>
+                </div>
+                
+                <div class="step">
+                    <span class="step-number">1</span>
+                    <div class="step-title">Activate License</div>
+                    <div class="step-content">
+                        If the license screen appears:
+                        <ul>
+                            <li>Enter the provided license key</li>
+                            <li>Fill in company details if requested</li>
+                            <li>Click "Activate License"</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="alert alert-warning">
+                    <strong>⚠️ Activation Failed?</strong> Contact PayGURU support immediately with the exact error message displayed.
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Section -->
+        <div id="settings" class="content-section">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🖨️</div>
+                    <div class="card-title">Printer Management</div>
+                </div>
+                
+                <div class="step">
+                    <span class="step-number">1</span>
+                    <div class="step-title">Add New Printer</div>
+                    <div class="step-content">
+                        <ul>
+                            <li><strong>Name:</strong> Assign a recognizable name (e.g., "Counter Printer")</li>
+                            <li><strong>IP Address:</strong> Enter the printer's network IP address</li>
+                            <li><strong>Type:</strong> Select printer type (typically "thermal")</li>
+                            <li><strong>Location:</strong> Enter physical location for reference</li>
+                        </ul>
+                        <div style="margin-top: 15px;">
+                            <span class="status-indicator status-online"></span>Green = Online
+                            <span class="status-indicator status-offline" style="margin-left: 20px;"></span>Red = Offline
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <span class="step-number">2</span>
+                    <div class="step-title">Edit Existing Printer</div>
+                    <div class="step-content">
+                        Click the "Edit" button next to any printer to modify its configuration and save changes.
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">📱</div>
+                    <div class="card-title">Device Management</div>
+                </div>
+                
+                <div class="step">
+                    <span class="step-number">1</span>
+                    <div class="step-title">Add New Device</div>
+                    <div class="step-content">
+                        <ul>
+                            <li><strong>IP Address:</strong> Enter the device's network IP address</li>
+                            <li><strong>Location:</strong> Physical location (e.g., "Kitchen Display")</li>
+                            <li><strong>Printer Assignment:</strong> Select which printer to assign</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <span class="step-number">2</span>
+                    <div class="step-title">Edit Device Settings</div>
+                    <div class="step-content">
+                        Use the "Edit" button to modify device configurations as needed.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Operations Section -->
+        <div id="operations" class="content-section">
+            <div class="feature-grid">
+                <div class="feature-item">
+                    <div class="feature-icon">📺</div>
+                    <h3>Live Display</h3>
+                    <p>Real-time order monitoring with automatic refresh and live updates</p>
+                </div>
+                
+                <div class="feature-item">
+                    <div class="feature-icon">🍽️</div>
+                    <h3>Canteen Settings</h3>
+                    <p>Manage menu items, pricing, and availability configurations</p>
+                </div>
+                
+                <div class="feature-item">
+                    <div class="feature-icon">📧</div>
+                    <h3>Email Configuration</h3>
+                    <p>Set up automated email reports and manual report sending</p>
+                </div>
+                
+                <div class="feature-item">
+                    <div class="feature-icon">📊</div>
+                    <h3>Reports & Analytics</h3>
+                    <p>Download detailed reports and send them manually or automatically</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🔍</div>
+                    <div class="card-title">Status Monitoring</div>
+                </div>
+                
+                <div class="alert alert-success">
+                    The main screen displays real-time status of all connected printers and devices. Monitor connectivity and troubleshoot issues immediately.
+                </div>
+            </div>
+        </div>
+
+        <!-- Support Section -->
+        <div id="support" class="content-section">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🛟</div>
+                    <div class="card-title">Technical Support</div>
+                </div>
+                
+                <div class="feature-grid">
+                    <div class="feature-item">
+                        <div class="feature-icon">📧</div>
+                        <h3>Email Support</h3>
+                        <p><strong>support@payguru.in</strong></p>
+                    </div>
+                    
+                    <div class="feature-item">
+                        <div class="feature-icon">📞</div>
+                        <h3>Phone Support</h3>
+                        <p><strong>+91 7016183622</strong></p>
+                    </div>
+                    
+                    <div class="feature-item">
+                        <div class="feature-icon">🕒</div>
+                        <h3>Support Hours</h3>
+                        <p><strong>Mon-Sat: 9:00 AM - 6:00 PM</strong></p>
+                    </div>
+                </div>
+
+                <div class="alert alert-info">
+                    <strong>📋 When contacting support, please include:</strong>
+                    <ul style="margin: 10px 0; padding-left: 20px;">
+                        <li>Error messages (screenshots preferred)</li>
+                        <li>Steps to reproduce the issue</li>
+                        <li>Your license key</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🔄</div>
+                    <div class="card-title">Daily Maintenance Checklist</div>
+                </div>
+                
+                <div class="step">
+                    <span class="step-number">✓</span>
+                    <div class="step-title">Morning Setup</div>
+                    <div class="step-content">
+                        Check printer paper levels and verify all devices show as online before starting operations.
+                    </div>
+                </div>
+
+                <div class="step">
+                    <span class="step-number">✓</span>
+                    <div class="step-title">Automated Reports</div>
+                    <div class="step-content">
+                        The system automatically generates and emails daily reports when properly configured.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <h3>🚀 Developed by PayGURU Technosoft Pvt. Ltd.</h3>
+            <p>Streamlining canteen operations with cutting-edge technology</p>
+        </div>
+    </div>
+
+    <script>
+        function showSection(sectionId) {
+            // Hide all sections
+            const sections = document.querySelectorAll('.content-section');
+            sections.forEach(section => section.classList.remove('active'));
+            
+            // Remove active class from all nav pills
+            const navPills = document.querySelectorAll('.nav-pill');
+            navPills.forEach(pill => pill.classList.remove('active'));
+            
+            // Show selected section
+            document.getElementById(sectionId).classList.add('active');
+            
+            // Add active class to clicked nav pill
+            event.target.classList.add('active');
+        }
+
+        // Add some interactive animations
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('.card');
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.animation = 'fadeIn 0.6s ease-out';
+                    }
+                });
+            });
+            
+            cards.forEach(card => observer.observe(card));
+        });
+    </script>
+</body>
+</html>

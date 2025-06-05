@@ -17,6 +17,7 @@ from cryptography.hazmat.backends import default_backend
 import mysql.connector
 from mysql.connector import Error
 import logging
+import time
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -95,15 +96,53 @@ class LicenseManager:
     async def get_device_id(self):
         """Generate a unique device ID based on hardware characteristics"""
         try:
-            cpu_info = platform.processor()
-            total_memory = str(psutil.virtual_memory().total)
-            system_info = platform.system() + platform.release()
+            # Try to get CPU info
+            try:
+                cpu_info = platform.processor()
+                if not cpu_info:
+                    logging.warning("Could not retrieve CPU info, using fallback")
+                    cpu_info = "Unknown-CPU"
+            except Exception as cpu_err:
+                logging.error(f"Error getting CPU info: {cpu_err}")
+                cpu_info = "CPU-Error"
+            
+            # Try to get memory info
+            try:
+                total_memory = str(psutil.virtual_memory().total)
+                if not total_memory:
+                    logging.warning("Could not retrieve memory info, using fallback")
+                    total_memory = "Unknown-Memory"
+            except Exception as mem_err:
+                logging.error(f"Error getting memory info: {mem_err}")
+                total_memory = "Memory-Error"
+            
+            # Try to get system info
+            try:
+                system_info = platform.system() + platform.release()
+                if not system_info:
+                    logging.warning("Could not retrieve system info, using fallback")
+                    system_info = "Unknown-System"
+            except Exception as sys_err:
+                logging.error(f"Error getting system info: {sys_err}")
+                system_info = "System-Error"
+            
+            # Combine all information
             static_identifier = cpu_info + total_memory + system_info
-            machine_id = hashlib.sha256(static_identifier.encode()).hexdigest()
+            
+            # Generate hash
+            try:
+                machine_id = hashlib.sha256(static_identifier.encode()).hexdigest()
+            except Exception as hash_err:
+                logging.error(f"Error generating hash: {hash_err}")
+                # Use a timestamp-based fallback as last resort
+                machine_id = hashlib.sha256(f"{time.time()}-fallback-id".encode()).hexdigest()
+                
             print(f"Machine ID: {machine_id}")
             return machine_id
         except Exception as e:
             logging.error(f"Error retrieving device ID: {e}")
+            import traceback
+            logging.error(f"Device ID generation trace: {traceback.format_exc()}")
             return None
 
     async def get_db_connection(self):
@@ -211,7 +250,18 @@ class LicenseManager:
         
         try:
             print(f"Activating license with key: {key}")
-            db_connection = await self.get_db_connection()
+            # Try to get device ID first to diagnose any issues there
+            device_id = await self.get_device_id()
+            print(f"Machine ID: {device_id}")
+            
+            # Connect to database
+            try:
+                db_connection = await self.get_db_connection()
+            except mysql.connector.Error as db_err:
+                error_msg = f"Database connection failed: {db_err}"
+                logging.error(error_msg)
+                return {'success': False, 'message': error_msg}
+            
             cursor = db_connection.cursor(dictionary=True)
             
             query = """
@@ -220,11 +270,21 @@ class LicenseManager:
                 JOIN users u ON l.RegID = u.RegID
                 WHERE l.LicenseKey = %s
             """
-            cursor.execute(query, (key,))
-            results = cursor.fetchall()
+            
+            try:
+                cursor.execute(query, (key,))
+                results = cursor.fetchall()
+            except mysql.connector.Error as query_err:
+                error_msg = f"License query failed: {query_err}"
+                logging.error(error_msg)
+                if db_connection:
+                    db_connection.close()
+                return {'success': False, 'message': error_msg}
             
             if not results:
                 print("License key not found.")
+                if db_connection:
+                    db_connection.close()
                 return {'success': False, 'message': 'License key not found'}
             
             license_data = results[0]
@@ -235,12 +295,16 @@ class LicenseManager:
             existing_device_id = license_data.get('DeviceID')
             
             if not all([reg_id, license_id, license_key, active_status]):
+                if db_connection:
+                    db_connection.close()
                 return {'success': False, 'message': 'Invalid license data'}
             
             # Check if license is already bound to a different device
             if active_status.upper() == 'Y' and existing_device_id:
                 current_device_id = await self.get_device_id()
                 if current_device_id and existing_device_id.upper() != current_device_id.upper():
+                    if db_connection:
+                        db_connection.close()
                     return {'success': False, 'message': 'Authentication failed: License already bound to another device'}
             
             cursor.close()
@@ -248,9 +312,13 @@ class LicenseManager:
             
         except Exception as e:
             logging.error(f"Error activating license: {e}")
+            import traceback
+            traceback_str = traceback.format_exc()
+            logging.error(f"Detailed error trace: {traceback_str}")
+            
             if db_connection:
                 db_connection.close()
-            return {'success': False, 'message': 'License activation failed'}
+            return {'success': False, 'message': f'License activation failed: {str(e)}'}
         
         try:
             db_connection = await self.get_db_connection()
@@ -273,8 +341,16 @@ class LicenseManager:
                         l.DeviceID = %s, l.ActivationDate = %s 
                     WHERE l.LicenseKey = %s
                 """
-                cursor.execute(query, (device_id, activation_date_time, license_key))
-                db_connection.commit()
+                
+                try:
+                    cursor.execute(query, (device_id, activation_date_time, license_key))
+                    db_connection.commit()
+                except mysql.connector.Error as update_err:
+                    error_msg = f"Database update failed: {update_err}"
+                    logging.error(error_msg)
+                    if db_connection:
+                        db_connection.close()
+                    return {'success': False, 'message': error_msg}
                 
                 cursor.close()
                 db_connection.close()
@@ -288,19 +364,28 @@ class LicenseManager:
                     'ActivationDate': activation_date_time
                 }
                 
-                save_result = await self.save_license(license_data)
-                if save_result['success']:
-                    return {'success': True, 'message': 'License activated successfully'}
-                else:
-                    return {'success': False, 'message': 'License activation failed'}
+                try:
+                    save_result = await self.save_license(license_data)
+                    if save_result['success']:
+                        return {'success': True, 'message': 'License activated successfully'}
+                    else:
+                        return {'success': False, 'message': f'License file save failed: {save_result["message"]}'}
+                except Exception as save_err:
+                    error_msg = f"License file save error: {save_err}"
+                    logging.error(error_msg)
+                    return {'success': False, 'message': error_msg}
             else:
                 return {'success': False, 'message': 'Unknown license status'}
                 
         except Exception as e:
             logging.error(f"Error activating license: {e}")
+            import traceback
+            traceback_str = traceback.format_exc()
+            logging.error(f"Detailed error trace during activation: {traceback_str}")
+            
             if db_connection:
                 db_connection.close()
-            return {'success': False, 'message': 'License activation failed'}
+            return {'success': False, 'message': f'License activation failed: {str(e)}'}
 
     def get_current_ist_datetime(self):
         """Get current IST time in yyyy-mm-dd hh:mm:ss format"""
@@ -310,27 +395,60 @@ class LicenseManager:
     async def check_license_validity(self):
         """Check license validity from both file and database"""
         try:
+            print("Checking license validity...")
             file_exists = os.path.exists(self.LICENSE_FILE_PATH)
-            db_record_exists = await self.check_license_exist_db()
+            print(f"License file exists: {file_exists}")
+            
+            try:
+                db_record_exists = await self.check_license_exist_db()
+                print(f"Database record exists: {db_record_exists}")
+            except Exception as db_err:
+                error_msg = f"Database check failed: {db_err}"
+                logging.error(error_msg)
+                import traceback
+                logging.error(f"Database check trace: {traceback.format_exc()}")
+                return {'isValid': False, 'message': 'Database check failed', 'error': str(db_err)}
             
             if not file_exists and not db_record_exists:
                 return {'isValid': False, 'message': 'License not found'}
             
             if db_record_exists:
-                db_response = await self.check_license_validity_db()
-                if not db_response['isValid']:
-                    return {'isValid': False, 'message': 'Invalid license'}
-                else:
-                    if not file_exists:
-                        license_data = await self.get_license_db()
-                        await self.save_license(license_data)
-                    return {'isValid': True, 'message': 'Valid license'}
+                try:
+                    db_response = await self.check_license_validity_db()
+                    print(f"Database validation response: {db_response}")
+                    if not db_response['isValid']:
+                        return {'isValid': False, 'message': f"Invalid license: {db_response.get('message', 'Unknown reason')}"}
+                    else:
+                        if not file_exists:
+                            try:
+                                license_data = await self.get_license_db()
+                                if not license_data:
+                                    logging.error("Failed to retrieve license data from database")
+                                    return {'isValid': False, 'message': 'Failed to retrieve license data'}
+                                
+                                save_result = await self.save_license(license_data)
+                                if not save_result['success']:
+                                    logging.warning(f"Failed to save license file: {save_result['message']}")
+                                    # Continue anyway as DB record is valid
+                            except Exception as save_err:
+                                logging.error(f"Error while saving license file: {save_err}")
+                                # Continue as DB record is still valid
+                        return {'isValid': True, 'message': 'Valid license'}
+                except Exception as db_valid_err:
+                    error_msg = f"Error checking license validity in database: {db_valid_err}"
+                    logging.error(error_msg)
+                    import traceback
+                    logging.error(f"License validity check trace: {traceback.format_exc()}")
+                    return {'isValid': False, 'message': 'License validation error', 'error': str(db_valid_err)}
             
             return {'isValid': False, 'message': 'Invalid license'}
             
         except Exception as e:
             logging.error(f"checkLicenseValidity error: {e}")
-            return {'isValid': False, 'message': 'License check failed', 'error': str(e)}
+            import traceback
+            traceback_str = traceback.format_exc()
+            logging.error(f"Complete error trace: {traceback_str}")
+            return {'isValid': False, 'message': 'License check failed', 'error': str(e), 'trace': traceback_str}
 
 
 class LicenseApp:
@@ -468,8 +586,32 @@ class LicenseApp:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             try:
+                # First try to get device ID to check if that works
+                device_id = loop.run_until_complete(self.license_manager.get_device_id())
+                if not device_id:
+                    self.root.after(0, lambda: self.show_message("Failed to generate device ID. Please check system permissions.", '#ef4444'))
+                    return
+                
+                # Try to connect to database first to isolate connection issues
+                try:
+                    db_conn = loop.run_until_complete(self.license_manager.get_db_connection())
+                    if db_conn:
+                        db_conn.close()
+                except Exception as db_err:
+                    error_msg = f"Database connection error: {db_err}"
+                    self.root.after(0, lambda: self.show_message(f"Connection failed: {str(db_err)[:50]}...", '#ef4444'))
+                    logging.error(error_msg)
+                    return
+                
+                # Now try the full activation
                 result = loop.run_until_complete(self.license_manager.activate_license(license_key))
                 self.root.after(0, lambda: self.handle_activation_result(result))
+            except Exception as e:
+                error_msg = str(e)
+                logging.error(f"Activation error: {error_msg}")
+                import traceback
+                logging.error(f"Activation trace: {traceback.format_exc()}")
+                self.root.after(0, lambda: self.show_message(f"Error: {error_msg[:50]}...", '#ef4444'))
             finally:
                 loop.close()
         
@@ -484,7 +626,25 @@ class LicenseApp:
             messagebox.showinfo("Success", "License activated successfully!")
             self.root.after(1000, self.open_main_application)
         else:
-            self.show_message(result['message'], '#ef4444')
+            error_message = result.get('message', 'Unknown error')
+            self.show_message(error_message, '#ef4444')
+            
+            # Show more detailed message box for certain errors
+            if 'already bound' in error_message:
+                messagebox.showerror("Activation Failed", 
+                                    "This license key is already bound to another device.\n\n" +
+                                    "Please contact support to transfer the license.")
+            elif 'connection' in error_message.lower():
+                messagebox.showerror("Connection Error",
+                                    "Failed to connect to the license server.\n\n" +
+                                    "Please check your internet connection and try again.")
+            elif 'not found' in error_message:
+                messagebox.showerror("Invalid License",
+                                    "The license key you entered was not found.\n\n" +
+                                    "Please check the key and try again.")
+            else:
+                # Generic error with the full message
+                messagebox.showerror("Activation Error", f"License activation failed:\n\n{error_message}")
     
     def continue_to_trial(self):
         """Handle continue to trial button"""
@@ -541,48 +701,120 @@ class TrialLicenseManager:
 def main():
     """Main function to run the application"""
     try:
+        # Set up basic logging first
+        log_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "license_manager.log")
+        logging.basicConfig(
+            filename=log_file,
+            level=logging.INFO,
+            format='%(asctime)s - %(levelname)s - %(message)s',
+            datefmt='%Y-%m-%d %H:%M:%S'
+        )
+        logging.info("=== License Manager Started ===")
+        
         # Create license manager first to check validity
-        license_manager = LicenseManager()
+        try:
+            license_manager = LicenseManager()
+            logging.info("License manager initialized")
+        except Exception as init_error:
+            error_msg = f"Failed to initialize license manager: {init_error}"
+            logging.error(error_msg)
+            messagebox.showerror("Initialization Error", f"{error_msg}\n\nPlease check log file for details.")
+            return
         
         # Check license validity before showing UI
+        logging.info("Checking license validity")
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
+        
         try:
+            # Try to get device ID first to diagnose issues
+            device_id = loop.run_until_complete(license_manager.get_device_id())
+            if not device_id:
+                logging.error("Could not generate device ID")
+                messagebox.showerror("Device Error", 
+                                   "Failed to generate a unique device ID.\n\n" +
+                                   "This is required for license activation.\n\n" +
+                                   "Please check system permissions and restart the application.")
+                loop.close()
+                return
+            
+            # Now check license validity
             result = loop.run_until_complete(license_manager.check_license_validity())
-            loop.close()
+            logging.info(f"License check result: {result}")
             
             if result['isValid']:
                 # License is valid, open main application directly
                 messagebox.showinfo("Success", "License is valid! Opening main application...")
                 # Run settings.py directly
-                import os
-                import sys
-                import subprocess
-                
-                # Get the current directory
-                current_dir = os.path.dirname(os.path.abspath(__file__))
-                settings_path = os.path.join(current_dir, "settings.py")
-                
-                # Check if settings.py exists and run it
-                if os.path.exists(settings_path):
-                    # Use the same Python interpreter that's running this script
-                    python_executable = sys.executable
-                    subprocess.Popen([python_executable, settings_path])
-                else:
-                    messagebox.showerror("LicenseManager", f"You now have a valid license. You may now have permission to start the application.")
-                return
+                try:
+                    import os
+                    import sys
+                    import subprocess
+                    
+                    # Get the current directory
+                    current_dir = os.path.dirname(os.path.abspath(__file__))
+                    settings_path = os.path.join(current_dir, "settings.py")
+                    
+                    # Check if settings.py exists and run it
+                    if os.path.exists(settings_path):
+                        logging.info(f"Starting main application: {settings_path}")
+                        # Use the same Python interpreter that's running this script
+                        python_executable = sys.executable
+                        subprocess.Popen([python_executable, settings_path])
+                    else:
+                        error_msg = f"Main application file not found: {settings_path}"
+                        logging.error(error_msg)
+                        messagebox.showerror("LicenseManager", f"Main application file not found.\n\n{settings_path}")
+                except Exception as start_err:
+                    error_msg = f"Error starting main application: {start_err}"
+                    logging.error(error_msg)
+                    messagebox.showerror("Startup Error", f"Failed to start main application:\n\n{start_err}")
             else:
-                # License is invalid, show the license UI
+                # License is invalid, show error if specific reason available
+                if 'error' in result:
+                    logging.error(f"License validation error: {result['error']}")
+                
+                # Show the license UI
+                logging.info("Starting license activation UI")
                 app = LicenseApp()
                 app.run()
         except Exception as e:
-            logging.error(f"License check error: {e}")
-            # If there's an error checking license, show the UI anyway
+            error_msg = f"License check error: {e}"
+            logging.error(error_msg)
+            import traceback
+            logging.error(f"Error trace: {traceback.format_exc()}")
+            
+            # If there's an error checking license, show detailed error and then UI
+            messagebox.showerror("License Error", 
+                              f"An error occurred while checking license:\n\n{str(e)[:100]}...\n\n" +
+                              "Please check your internet connection and try again.")
+            
+            # Show the license UI anyway
             app = LicenseApp()
             app.run()
+        finally:
+            loop.close()
+            
     except Exception as e:
-        logging.error(f"Application error: {e}")
-        messagebox.showerror("Error", f"An error occurred: {e}")
+        # Catch-all for any other errors
+        try:
+            logging.error(f"Application error: {e}")
+            import traceback
+            logging.error(f"Critical error trace: {traceback.format_exc()}")
+        except:
+            # If even logging fails, at least show the error
+            pass
+            
+        messagebox.showerror("Critical Error", 
+                          f"A critical error occurred:\n\n{str(e)}\n\n" +
+                          "The application cannot continue.")
+        
+        # Try to show UI anyway as last resort
+        try:
+            app = LicenseApp()
+            app.run()
+        except:
+            pass
 
 
 if __name__ == "__main__":
