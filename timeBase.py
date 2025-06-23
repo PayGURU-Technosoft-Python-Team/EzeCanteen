@@ -231,6 +231,8 @@ def fetch_device_config(force_refresh=False):
             CONFIG_REFRESHED = True
             return
         
+
+        
         # Create a dictionary to map printer IPs to their details
         printer_ip_map = {}
         

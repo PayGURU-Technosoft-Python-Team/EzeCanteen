@@ -989,9 +989,13 @@ class PrinterSetupWindow(QMainWindow):
                 # Update existing printer
                 device_number = self.edit_printer.get('deviceNumber', 1)
                 
+                # Use the original printer name for the WHERE clause
+                original_printer_name = self.edit_printer.get('name', printer_name)
+                
                 # Prepare SQL statement for update
                 sql = """
                 UPDATE configh SET
+                    DeviceType = %s,
                     IP = %s,
                     Port = %s,
                     DeviceLocation = %s,
@@ -1002,11 +1006,12 @@ class PrinterSetupWindow(QMainWindow):
 
                 # Execute SQL with values
                 values = (
+                    printer_name,  # New name
                     printer_ip,
                     printer_port,
                     location,
                     enable_value,
-                    printer_name,  # Use name as DeviceType
+                    original_printer_name,  # Use original name in WHERE clause
                     device_number,
                     self.license_key
                 )

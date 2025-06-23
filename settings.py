@@ -26,6 +26,7 @@ DB_PORT = 33975
 DB_PASS = "L^{Z,8~zzfF9(nd8"
 DB_NAME = "payguru_canteen"
    
+
 # Import the EzeeCanteen class from timeBase.py
 try:
     from timeBase import EzeeCanteen
@@ -591,28 +592,28 @@ class EzeeCanteenWindow(QMainWindow):
         
         # Printer Settings
         printer_frame = QFrame()
-        printer_frame.setStyleSheet("background-color: #111827; border-radius: 8px; padding: 12px; margin-top: 10px;")
+        printer_frame.setStyleSheet("background-color: #111827; border-radius: 8px; padding: 4px; margin-top: 10px;")
         printer_layout = QVBoxLayout(printer_frame)
-        printer_layout.setSpacing(2)  # Further reduced spacing
-        printer_layout.setContentsMargins(10, 8, 10, 8)  # Reduced margins
+        printer_layout.setSpacing(1)  # Reduced spacing
+        printer_layout.setContentsMargins(8, 6, 8, 6)  # Reduced margins
         
         printer_title = QLabel("🖨️ Printer Settings")
-        printer_title.setStyleSheet("font-size: 24px; font-weight: bold; border-bottom: 1px solid #374151; padding-bottom: 8px; margin-bottom: 6px;")
+        printer_title.setStyleSheet("font-size: 20px; font-weight: bold; border-bottom: 1px solid #374151; padding-bottom: 4px; margin-bottom: 4px;")
         printer_layout.addWidget(printer_title)
         
-        # Scrollable area for printers - full width with max height
+        # Scrollable area for printers - full width with reduced max height
         printers_scroll = QScrollArea()
         printers_scroll.setWidgetResizable(True)
         printers_scroll.setStyleSheet("border: none; background-color: transparent;")
         printers_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         printers_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        printers_scroll.setMaximumHeight(160)  # Set maximum height to limit vertical space
+        printers_scroll.setMaximumHeight(120)  # Reduced maximum height
         
         self.printers_list = QWidget()
         self.printers_list.setStyleSheet("background-color: transparent;")
         self.printers_layout = QVBoxLayout(self.printers_list)
         self.printers_layout.setContentsMargins(0, 0, 0, 0)
-        self.printers_layout.setSpacing(2)  # Minimal spacing between printers
+        self.printers_layout.setSpacing(1)  # Reduced spacing between printers
         self.printers_layout.setAlignment(Qt.AlignTop)  # Align to top
         printers_scroll.setWidget(self.printers_list)
         printer_layout.addWidget(printers_scroll)
@@ -622,10 +623,11 @@ class EzeeCanteenWindow(QMainWindow):
             QPushButton {
                 background-color: #2563eb;
                 color: white;
-                padding: 6px 12px;
-                border-radius: 4px;
+                padding: 3px 8px;
+                border-radius: 3px;
                 font-weight: bold;
-                max-width: 120px;
+                max-width: 100px;
+                font-size: 11px;
             }
             QPushButton:hover {
                 background-color: #1d4ed8;
@@ -641,28 +643,28 @@ class EzeeCanteenWindow(QMainWindow):
         
         # Device Settings
         device_frame = QFrame()
-        device_frame.setStyleSheet("background-color: #111827; border-radius: 8px; padding: 12px; margin-top: 10px;")
+        device_frame.setStyleSheet("background-color: #111827; border-radius: 8px; padding: 4px; margin-top: 10px;")
         device_layout = QVBoxLayout(device_frame)
-        device_layout.setSpacing(2)  # Further reduced spacing
-        device_layout.setContentsMargins(10, 8, 10, 8)  # Reduced margins
+        device_layout.setSpacing(1)  # Reduced spacing
+        device_layout.setContentsMargins(8, 6, 8, 6)  # Reduced margins
         
         device_title = QLabel("📱 Device Settings")
-        device_title.setStyleSheet("font-size: 22px; font-weight: bold; border-bottom: 1px solid #374151; padding-bottom: 8px; margin-bottom: 6px;")
+        device_title.setStyleSheet("font-size: 20px; font-weight: bold; border-bottom: 1px solid #374151; padding-bottom: 4px; margin-bottom: 4px;")
         device_layout.addWidget(device_title)
         
-        # Scrollable area for devices - full width with max height
+        # Scrollable area for devices - full width with reduced max height
         devices_scroll = QScrollArea()
         devices_scroll.setWidgetResizable(True)
         devices_scroll.setStyleSheet("border: none; background-color: transparent;")
         devices_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         devices_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        devices_scroll.setMaximumHeight(160)  # Set maximum height to limit vertical space
+        devices_scroll.setMaximumHeight(120)  # Reduced maximum height
         
         self.devices_list = QWidget()
         self.devices_list.setStyleSheet("background-color: transparent;")
         self.devices_layout = QVBoxLayout(self.devices_list)
         self.devices_layout.setContentsMargins(0, 0, 0, 0)
-        self.devices_layout.setSpacing(2)  # Minimal spacing between devices
+        self.devices_layout.setSpacing(1)  # Reduced spacing between devices
         self.devices_layout.setAlignment(Qt.AlignTop)  # Align to top
         devices_scroll.setWidget(self.devices_list)
         device_layout.addWidget(devices_scroll)
@@ -672,10 +674,11 @@ class EzeeCanteenWindow(QMainWindow):
             QPushButton {
                 background-color: #2563eb;
                 color: white;
-                padding: 6px 12px;
-                border-radius: 4px;
+                padding: 3px 8px;
+                border-radius: 3px;
                 font-weight: bold;
-                max-width: 120px;
+                max-width: 100px;
+                font-size: 11px;
             }
             QPushButton:hover {
                 background-color: #1d4ed8;
@@ -980,13 +983,13 @@ class EzeeCanteenWindow(QMainWindow):
             
             # Set background color based on enable status
             if printer.get('enable') == 'Y':
-                printer_widget.setStyleSheet("background-color: #15803d; border-radius: 4px; padding: 2px 4px; margin-bottom: 2px;")
+                printer_widget.setStyleSheet("background-color: #15803d; border-radius: 3px; padding: 1px 3px; margin-bottom: 1px;")
             else:
-                printer_widget.setStyleSheet("background-color: #b91c1c; border-radius: 4px; padding: 2px 4px; margin-bottom: 2px;")
+                printer_widget.setStyleSheet("background-color: #b91c1c; border-radius: 3px; padding: 1px 3px; margin-bottom: 1px;")
             
             printer_layout = QHBoxLayout(printer_widget)
-            printer_layout.setContentsMargins(2, 1, 2, 1)  # Further reduced margins
-            printer_layout.setSpacing(4)  # Reduced spacing between info and button
+            printer_layout.setContentsMargins(1, 1, 1, 1)  # Minimal margins
+            printer_layout.setSpacing(2)  # Reduced spacing between info and button
             
             info_widget = QWidget()
             info_layout = QVBoxLayout(info_widget)
@@ -998,17 +1001,17 @@ class EzeeCanteenWindow(QMainWindow):
             # Use printer number if name is not available
             printer_name = printer.get('name', f"Printer {printer.get('deviceNumber', 'Unknown')}")
             name_label = QLabel(f"<strong>Name:</strong> {printer_name}")
-            name_label.setStyleSheet("color: white; margin: 0; padding: 0; font-size: 14px;")
-            name_label.setFixedHeight(18)  # Fixed height for consistent spacing
+            name_label.setStyleSheet("color: white; margin: 0; padding: 0; font-size: 12px;")
+            name_label.setFixedHeight(15)  # Reduced fixed height
             
             ip_label = QLabel(f"<strong>IP:</strong> {printer.get('ip', 'Unknown')}")
-            ip_label.setStyleSheet("color: white; margin: 0; padding: 0; font-size: 14px;")
-            ip_label.setFixedHeight(18)  # Fixed height for consistent spacing
+            ip_label.setStyleSheet("color: white; margin: 0; padding: 0; font-size: 12px;")
+            ip_label.setFixedHeight(15)  # Reduced fixed height
             
             # Show device type
             type_label = QLabel(f"<strong>Type:</strong> {printer.get('type', 'thermal')}")
-            type_label.setStyleSheet("color: white; margin: 0; padding: 0; font-size: 14px;")
-            type_label.setFixedHeight(18)  # Fixed height for consistent spacing
+            type_label.setStyleSheet("color: white; margin: 0; padding: 0; font-size: 12px;")
+            type_label.setFixedHeight(15)  # Reduced fixed height
             
             info_layout.addWidget(name_label)
             info_layout.addWidget(ip_label)
@@ -1019,15 +1022,15 @@ class EzeeCanteenWindow(QMainWindow):
             
             edit_button = QPushButton("Edit")
             edit_button.setObjectName(f"editPButton-{index}")
-            edit_button.setFixedSize(70, 34)  # Smaller button
+            edit_button.setFixedSize(60, 30)  # Smaller button
             edit_button.setStyleSheet("""
                 QPushButton {
                     background-color: #ca8a04;
                     color: white;
-                    padding: 1px 4px;
-                    border-radius: 3px;
+                    padding: 1px 2px;
+                    border-radius: 2px;
                     font-weight: bold;
-                    font-size: 11px;
+                    font-size: 10px;
                 }
                 QPushButton:hover {
                     background-color: #a16207;
@@ -1054,13 +1057,13 @@ class EzeeCanteenWindow(QMainWindow):
             
             # Set background color based on enable status
             if device.get('enable') == 'Y':
-                device_widget.setStyleSheet("background-color: #15803d; border-radius: 6px; padding: 2px 4px; margin-bottom: 2px;")
+                device_widget.setStyleSheet("background-color: #15803d; border-radius: 3px; padding: 1px 3px; margin-bottom: 1px;")
             else:
-                device_widget.setStyleSheet("background-color: #b91c1c; border-radius: 6px; padding: 2px 4px; margin-bottom: 2px;")
+                device_widget.setStyleSheet("background-color: #b91c1c; border-radius: 3px; padding: 1px 3px; margin-bottom: 1px;")
             
             device_layout = QHBoxLayout(device_widget)
-            device_layout.setContentsMargins(2, 1, 2, 1)  # Further reduced margins
-            device_layout.setSpacing(4)  # Reduced spacing between info and button
+            device_layout.setContentsMargins(1, 1, 1, 1)  # Minimal margins
+            device_layout.setSpacing(2)  # Reduced spacing between info and button
             
 
             # Create info widget to display device details
@@ -1073,22 +1076,22 @@ class EzeeCanteenWindow(QMainWindow):
             
             # IP Address label - always shown
             ip_label = QLabel(f"<strong>Device IP:</strong> {device.get('ip', 'Unknown')}")
-            ip_label.setStyleSheet("color: white; margin: 0; padding: 0; font-size: 14px;")
-            ip_label.setFixedHeight(18)  # Fixed height for consistent spacing
+            ip_label.setStyleSheet("color: white; margin: 0; padding: 0; font-size: 12px;")
+            ip_label.setFixedHeight(15)  # Reduced fixed height
             info_layout.addWidget(ip_label)
             
             # Show location if available
             location = device.get('location', '')
             if location:
                 location_label = QLabel(f"<strong>Location:</strong> {location}")
-                location_label.setStyleSheet("color: white; margin: 0; padding: 0; font-size: 14px;")
-                location_label.setFixedHeight(18)  # Fixed height for consistent spacing
+                location_label.setStyleSheet("color: white; margin: 0; padding: 0; font-size: 12px;")
+                location_label.setFixedHeight(15)  # Reduced fixed height
                 info_layout.addWidget(location_label)
             else:
                 # Add empty location label to maintain consistent height
                 location_label = QLabel("<strong>Location:</strong> -")
-                location_label.setStyleSheet("color: white; margin: 0; padding: 0; font-size: 14px;")
-                location_label.setFixedHeight(18)  # Fixed height for consistent spacing
+                location_label.setStyleSheet("color: white; margin: 0; padding: 0; font-size: 12px;")
+                location_label.setFixedHeight(15)  # Reduced fixed height
                 info_layout.addWidget(location_label)
             
             # Show assigned printer - either from printerName or find printer by IP
@@ -1104,8 +1107,8 @@ class EzeeCanteenWindow(QMainWindow):
                 printer_name = '-'
                 
             printer_label = QLabel(f"<strong>Assigned Printer:</strong> {printer_name}")
-            printer_label.setStyleSheet("color: white; margin: 0; padding: 0; font-size: 14px;")
-            printer_label.setFixedHeight(18)  # Fixed height for consistent spacing
+            printer_label.setStyleSheet("color: white; margin: 0; padding: 0; font-size: 12px;")
+            printer_label.setFixedHeight(15)  # Reduced fixed height
             info_layout.addWidget(printer_label)
             info_layout.addStretch(0)  # Prevent stretching
             
@@ -1113,15 +1116,15 @@ class EzeeCanteenWindow(QMainWindow):
             
             edit_button = QPushButton("Edit")
             edit_button.setObjectName(f"editDButton-{index}")
-            edit_button.setFixedSize(70, 34)  # Smaller button
+            edit_button.setFixedSize(60, 30)  # Smaller button
             edit_button.setStyleSheet("""
                 QPushButton {
                     background-color: #ca8a04;
                     color: white;
-                    padding: 1px 4px;
-                    border-radius: 3px;
+                    padding: 1px 2px;
+                    border-radius: 2px;
                     font-weight: bold;
-                    font-size: 11px;
+                    font-size: 10px;
                 }
                 QPushButton:hover {
                     background-color: #a16207;
@@ -1213,16 +1216,26 @@ class EzeeCanteenWindow(QMainWindow):
         # Find the printer in the local list
         printer_index = -1
         for i, printer in enumerate(self.printers):
-            if printer.get('deviceNumber') == updated_printer.get('deviceNumber') or \
-               (printer.get('name') == updated_printer.get('name') and 
-                printer.get('ip') == updated_printer.get('ip')):
+            # Check if this is the edited printer - first check device number
+            if printer.get('deviceNumber') == updated_printer.get('deviceNumber'):
                 self.printers[i] = updated_printer
                 printer_index = i
+                print(f"Updated printer at index {i} by device number match")
+                break
+            # If we don't have the original printer form object anymore, we can still try to match by IP
+            elif printer.get('ip') == self.printer_form.edit_printer.get('ip'):
+                self.printers[i] = updated_printer
+                printer_index = i
+                print(f"Updated printer at index {i} by original IP match")
                 break
         else:
             # If no matching printer found, add as new
             self.printers.append(updated_printer)
             printer_index = len(self.printers) - 1
+            print(f"Added printer as new at index {printer_index}")
+        
+        # Save the settings (important!)
+        self.save_settings_sync({'printers': self.printers, 'devices': self.devices})
         
         # Check the online status of the printer and update UI
         if printer_index >= 0:
@@ -1231,7 +1244,7 @@ class EzeeCanteenWindow(QMainWindow):
         
         # Return to the settings screen
         self.return_from_printer_form()
-        
+    
     def on_device_saved(self, device_data):
         """Handle when a device is saved (added or edited)"""
         device_index = -1
@@ -1463,7 +1476,7 @@ class EzeeCanteenWindow(QMainWindow):
         central_layout = QVBoxLayout(self.central_widget)
         central_layout.setContentsMargins(0, 0, 0, 0)
         central_layout.addWidget(main_scroll_area)
-        
+        print 
         # Re-initialize the UI
         self.init_ui()
         
