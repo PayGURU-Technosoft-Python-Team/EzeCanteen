@@ -1702,7 +1702,7 @@ class EzeeCanteen(QMainWindow):
         
         # Clean up
         self.db_test_worker = None
-    
+   
     def insert_to_database(self, event_data):
         print("event_data",event_data)
         """Insert authentication data into the database"""
