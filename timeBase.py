@@ -103,7 +103,7 @@ def fetch_device_config(force_refresh=False):
     
     # Clear existing device configurations if refreshing
     if force_refresh and DEVICES:
-        logging.info("Forcing refresh of device configurations")
+        # logging.info("Forcing refresh of device configurations")
         DEVICES.clear()
     
     try:
@@ -127,14 +127,14 @@ def fetch_device_config(force_refresh=False):
             license_data = get_license_data()
             if license_data and 'LicenseKey' in license_data:
                 license_key = license_data['LicenseKey']
-                logging.info(f"Retrieved license key for device filtering: {license_key}")
+                # logging.info(f"Retrieved license key for device filtering: {license_key}")
             else:
                 logging.warning("Could not retrieve license key for device filtering")
         except Exception as e:
             logging.error(f"Error getting license key: {e}")
         
         # Connect to the database
-        logging.info(f"Connecting to database at {DB_HOST}:{DB_PORT}")
+        # logging.info(f"Connecting to database at {DB_HOST}:{DB_PORT}")
         conn = mysql.connector.connect(
             host=DB_HOST,
             user=DB_USER,
@@ -149,14 +149,12 @@ def fetch_device_config(force_refresh=False):
         # Query to fetch devices associated with the current license key
         sql = """
         SELECT 
-            c.SrNo, c.DeviceType, c.DeviceNumber, c.IP, c.Port, c.DeviceLocation, c.ComUser, 
-            c.Enable, c.DevicePrinterIP, c.DeviceName,
-            AES_DECRYPT(c.comKey, SHA2(CONCAT('pg2175', c.CreatedDateTime), 512)) as Pwd
-        FROM configh c
-        JOIN license_devices ld ON c.SrNo = ld.DeviceID
-        JOIN licenses l ON ld.LicenseID = l.ID
-        WHERE c.Enable = 'Y' AND l.LicenseKey = %s
-        ORDER BY c.DeviceType, c.DeviceNumber
+            SrNo, DeviceType, DeviceNumber, IP, Port, DeviceLocation, ComUser, 
+            Enable, DevicePrinterIP, DeviceName,
+            AES_DECRYPT(comKey, SHA2(CONCAT('pg2175', CreatedDateTime), 512)) as Pwd
+        FROM configh
+        WHERE Enable = 'Y' AND LicenseKey = %s
+        ORDER BY DeviceType, DeviceNumber
         """
         
         # Fallback query if no license key or if the join query fails
@@ -166,8 +164,9 @@ def fetch_device_config(force_refresh=False):
             Enable, DevicePrinterIP, DeviceName,
             AES_DECRYPT(comKey, SHA2(CONCAT('pg2175', CreatedDateTime), 512)) as Pwd
         FROM configh
-        WHERE Enable = 'Y' AND LicenseKey = %s
+        WHERE Enable = 'Y'
         ORDER BY DeviceType, DeviceNumber
+        LIMIT 5  # Limit to prevent loading too many devices
         """
         
         # Second fallback if license key column doesn't exist
@@ -182,14 +181,14 @@ def fetch_device_config(force_refresh=False):
         LIMIT 5  # Limit to prevent loading too many devices
         """
         
-        logging.info(f"Fetching devices for license key: {license_key}")
+        # logging.info(f"Fetching devices for license key")
         
         # Try the main query with license key join first
         try:
             cursor.execute(sql, (license_key,))
             results = cursor.fetchall()
             if results:
-                logging.info(f"Found {len(results)} devices using license key join query")
+                pass
             else:
                 # If no results, try the fallback query
                 logging.info("No devices found with license key join, trying fallback query")
@@ -271,12 +270,10 @@ def fetch_device_config(force_refresh=False):
                     print("3")
                     device_pwd = PASSWORD  # Use default if no password
                 
-                print("___________________")
-                print(device_pwd)
                 # Find associated printer from DevicePrinterIP
                 printer_ip = device.get('DevicePrinterIP', '')
                 
-                logging.info(f"Processing device {device_ip} with DevicePrinterIP: {printer_ip}")
+                # logging.info(f"Processing device {device_ip} with DevicePrinterIP: {printer_ip}")
                 
                 # If printer IP is not in our map, create a virtual printer entry
                 if printer_ip and printer_ip not in printer_ip_map:
@@ -286,7 +283,7 @@ def fetch_device_config(force_refresh=False):
                         'name': 'CITIZEN',  # Default name
                         'virtual': True  # Mark as virtual printer
                     }
-                    logging.info(f"Created virtual printer entry for IP: {printer_ip}")
+                    # logging.info(f"Created virtual printer entry for IP: {printer_ip}")
                 
                 # Get printer details if available
                 printer_config = {
@@ -315,7 +312,7 @@ def fetch_device_config(force_refresh=False):
                     'printer': printer_config
                 }
                 
-                logging.info(f"Loaded device configuration: {device_ip}:{device_port} -> Printer: {printer_config['ip']}:{printer_config['port']}")
+                # logging.info(f"Loaded device configuration: {device_ip}:{device_port} -> Printer: {printer_config['ip']}:{printer_config['port']}")
         
         # Set default device to the first one for backward compatibility
         if DEVICES:
@@ -324,7 +321,7 @@ def fetch_device_config(force_refresh=False):
             PORT = first_device['device']['port']
             USERNAME = first_device['device']['user']
             PASSWORD = first_device['device']['password']
-            logging.info(f"Set default device to {IP}:{PORT}")
+            # logging.info(f"Set default device to {IP}:{PORT}")
         
         # Close cursor and connection
         cursor.close()
@@ -332,7 +329,7 @@ def fetch_device_config(force_refresh=False):
         
         # Mark as refreshed
         CONFIG_REFRESHED = True
-        logging.info(f"Device configurations refreshed successfully - {len(DEVICES)} devices loaded")
+        # logging.info(f"Device configurations refreshed successfully - {len(DEVICES)} devices loaded")
         
     except mysql.connector.Error as err:
         logging.error(f"Database error while fetching device configurations: {err}")
@@ -353,19 +350,20 @@ if not os.path.exists(TEMP_DIR):
 
 def print_server_addresses():
     """Prints all server addresses used in the application"""
-    print("\n===== SERVER ADDRESSES =====")
-    print(f"Database Server: {DB_HOST}:{DB_PORT}")
+    # print("\n===== SERVER ADDRESSES =====")
+    # print(f"Database Server: {DB_HOST}:{DB_PORT}")
     
     # Print all device and printer configurations
-    if DEVICES:
-        print("\n   :")
-        for device_ip, config in DEVICES.items():
-            print(f"  Device: {device_ip}:{config['device']['port']} ({config['device']['location'] or 'No location'})")
-            print(f"  Printer: {config['printer']['ip']}:{config['printer']['port']}")
-            print("")
-    else:
-        print(f"\nUsing default device: {IP}:{PORT}")
-        
+    # if DEVICES:
+    #     print("\n   :")
+    #     for device_ip, config in DEVICES.items():
+    #         print(f"  Device: {device_ip}:{config['device']['port']} ({config['device']['location'] or 'No location'})")
+    #         print(f"  Printer: {config['printer']['ip']}:{config['printer']['port']}")
+    #         print("")
+    # else:
+    #     print(f"\nUsing default device: {IP}:{PORT}")
+
+    if not DEVICES:    
         # Try to get printer IP from appSettings.json
         try:
             with open('appSettings.json', 'r') as f:
@@ -377,7 +375,7 @@ def print_server_addresses():
         except Exception as e:
             print(f"Default Printer: Unknown (Error: {e})")
     
-    print("===========================\n")
+    # print("===========================\n")
 
 
 def getDeviceDetails(ip, port, user, psw):
@@ -392,8 +390,8 @@ def getDeviceDetails(ip, port, user, psw):
     try:
         # Log authentication attempt (sanitize password)
         masked_password = psw[:2] + "*" * (len(psw) - 4) + psw[-2:] if len(psw) > 4 else "****"
-        logging.info(f"Getting device details for {ip}:{port} with user: {user}")
-        print(f"Getting device details for {ip}:{port} with user: {user}")
+        # logging.info(f"Getting device details for {ip}:{port} with user: {user}")
+        # print(f"Getting device details for {ip}:{port} with user: {user}")
        
         response = requests.get(url, auth=HTTPDigestAuth(
             user, psw), headers=headers, data=payload, timeout=5)
@@ -407,7 +405,7 @@ def getDeviceDetails(ip, port, user, psw):
            
         # When successful (status code 200)
         if response.status_code == 200:
-            logging.info(f"Successfully retrieved device details from {ip}:{port}")
+            # logging.info(f"Successfully retrieved device details from {ip}:{port}")
             try:
                 data = xmltodict.parse(response.text)
                 data = data['DeviceInfo']
@@ -420,7 +418,7 @@ def getDeviceDetails(ip, port, user, psw):
                     deviceSerial = serialNo
                 else:
                     deviceSerial = model + serialNo
-                logging.info(f"Device info: Model={model}, Serial={deviceSerial}, MAC={MacAddress}")
+                # logging.info(f"Device info: Model={model}, Serial={deviceSerial}, MAC={MacAddress}")
             except Exception as parse_err:
                 logging.error(f"Error parsing device details XML: {parse_err}. Response: {response.text[:200]}")
     except requests.exceptions.Timeout:
@@ -495,8 +493,8 @@ class AuthEventMonitor(QThread):
         
         # URL for access control events
         self.url = f"http://{self.ip}:{self.port}/ISAPI/AccessControl/AcsEvent?format=json"
-        logging.info(f"AuthEventMonitor initialized with endpoint: {self.url}")
-        logging.info(f"Starting to monitor events from: {self.start_time}")
+        # logging.info(f"AuthEventMonitor initialized with endpoint: {self.url}")
+        # logging.info(f"Starting to monitor events from: {self.start_time}")
         
         # Keep track of processed events
         self.processed_events = set()
@@ -514,6 +512,7 @@ class AuthEventMonitor(QThread):
             
             # Get meal schedule
             canteen_menu = self.app_settings.get('CanteenMenu', {})
+            
             self.meal_schedule = canteen_menu.get('MealSchedule', [])
             
             if self.meal_schedule and len(self.meal_schedule) > 0:
@@ -533,8 +532,8 @@ class AuthEventMonitor(QThread):
                     logging.info(f"  {meal_name}: {from_time} - {to_time}")
                     
             else:
-                self.config_error = "No meal schedule found in app settings"
-                logging.warning(self.config_error)
+                # self.config_error = "No meal schedule found in app settings"
+                # logging.warning(self.config_error)
                 # Use QTimer to emit signal after UI is ready
                 QTimer.singleShot(1000, lambda: self._emit_config_warning(self.config_error))
                 
@@ -600,14 +599,14 @@ class AuthEventMonitor(QThread):
                 self.port = device_config['port']
                 self.username = device_config['user']
                 self.password = device_config['password']
-                logging.info(f"AuthEventMonitor using device: {self.ip}:{self.port}")
+                # logging.info(f"AuthEventMonitor using device: {self.ip}:{self.port}")
             else:
                 # Use the global configuration (default device)
                 self.ip = IP
                 self.port = PORT
                 self.username = USERNAME
                 self.password = PASSWORD
-                logging.info(f"AuthEventMonitor using default device: {self.ip}:{self.port}")
+                # logging.info(f"AuthEventMonitor using default device: {self.ip}:{self.port}")
                 
             # Validate configuration
             if not all([self.ip, self.port, self.username, self.password]):
@@ -751,7 +750,7 @@ class AuthEventMonitor(QThread):
     
     def run(self):
         """Main monitoring loop"""
-        logging.info("Auth event monitoring started")
+        # logging.info("Auth event monitoring started")
         in_meal_time = False  # Track if we were previously in a meal time
         
         while self.running:
@@ -761,7 +760,7 @@ class AuthEventMonitor(QThread):
             # If we just entered a meal time period, update the start time
             if current_in_meal_time and not in_meal_time:
                 self.start_time = datetime.now()
-                logging.info(f"Entered meal time period. Updated start time to: {self.start_time}")
+                # logging.info(f"Entered meal time period. Updated start time to: {self.start_time}")
             
             # Update meal time status for next iteration
             in_meal_time = current_in_meal_time
@@ -831,7 +830,7 @@ class AuthEventMonitor(QThread):
                             # Get pagination information if this is the first page
                             if total_matches is None and "AcsEvent" in data and "totalMatches" in data["AcsEvent"]:
                                 total_matches = int(data["AcsEvent"]["totalMatches"])
-                                logging.info(f"Found {total_matches} total authentication events")
+                                # logging.info(f"Found {total_matches} total authentication events")
                             
                             # Extract event information if available
                             if "AcsEvent" in data:
@@ -861,7 +860,7 @@ class AuthEventMonitor(QThread):
                                         # Log the new authentication event
                                         emp_id = event.get('employeeNoString', event.get('employeeNo', 'N/A'))
                                         name = event.get('name', 'N/A')
-                                        logging.info(f"New authentication event: Employee ID={emp_id}, Name={name}, Time={event_time}")
+                                        # logging.info(f"New authentication event: Employee ID={emp_id}, Name={name}, Time={event_time}")
                                         
                                         # Add source device information to the event
                                         event['source_device_ip'] = self.device_ip
@@ -959,10 +958,12 @@ class AuthEventItem(QFrame):
                 border: 1px solid #34495e;
             }
         """)
-        # Make box more horizontal to better fit the images
-        self.setMinimumSize(220, 180)
-        self.setMaximumSize(300, 200)
-        
+        # Make box taller to accommodate location field
+        # self.setMinimumSize(220, 200)
+        # self.setMaximumSize(300, 230)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.setFixedHeight(200)  # Keep consistent height
+
         # Apply subtle shadow effect
         shadow = QGraphicsDropShadowEffect(self)
         shadow.setBlurRadius(10)
@@ -981,13 +982,18 @@ class AuthEventItem(QFrame):
             background-color: #1e2b38; 
             border-radius: 4px;
         """)
-        self.image_container.setFixedSize(180, 110)
-        
+        # self.image_container.setFixedSize(180, 110)
+        self.image_container.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.image_container.setFixedHeight(100)
+
         image_layout = QVBoxLayout(self.image_container)
         image_layout.setContentsMargins(0, 0, 0, 0)
         
         self.image_label = QLabel()
-        self.image_label.setFixedSize(170, 100)
+        # self.image_label.setFixedSize(170, 100)
+        self.image_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.image_label.setFixedHeight(100)
+
         self.image_label.setAlignment(Qt.AlignCenter)
         self.image_label.setStyleSheet("border: none; background: transparent;")
         self.image_label.setScaledContents(True)
@@ -1004,7 +1010,7 @@ class AuthEventItem(QFrame):
         
         # ID (previously name)
         emp_id = event_data.get('employeeNoString', event_data.get('employeeNo', 'N/A'))
-        id_label = QLabel(emp_id)
+        id_label = QLabel(f"{emp_id}")
         id_label.setStyleSheet("""
             color: white; 
             font-weight: bold; 
@@ -1013,7 +1019,7 @@ class AuthEventItem(QFrame):
         """)
         id_label.setAlignment(Qt.AlignCenter)
         
-        # Create info section
+        # Create info section with 3 columns now
         info_widget = QWidget()
         info_layout = QHBoxLayout(info_widget)
         info_layout.setContentsMargins(0, 0, 0, 0)
@@ -1027,7 +1033,7 @@ class AuthEventItem(QFrame):
             date_parts = ""
             time_parts = event_time
             
-        # Left column - Name (previously Status)
+        # Left column - Name
         left_column = QWidget()
         left_layout = QVBoxLayout(left_column)
         left_layout.setContentsMargins(0, 0, 0, 0)
@@ -1044,31 +1050,69 @@ class AuthEventItem(QFrame):
         name = event_data.get('name', 'N/A')
         name_value = QLabel(name)
         name_value.setStyleSheet("color: #bdc3c7; font-size: 12px; background: transparent;")
+        name_value.setWordWrap(True)
         
         left_layout.addWidget(name_label)
         left_layout.addWidget(name_value)
         
-        # Right column - Date (previously Label)
-        right_column = QWidget()
-        right_layout = QVBoxLayout(right_column)
-        right_layout.setContentsMargins(0, 0, 0, 0)
-        right_layout.setSpacing(2)
+        # Middle column - Time
+        middle_column = QWidget()
+        middle_layout = QVBoxLayout(middle_column)
+        middle_layout.setContentsMargins(0, 0, 0, 0)
+        middle_layout.setSpacing(2)
         
-        date_title = QLabel("TIME")
-        date_title.setStyleSheet("""
+        time_title = QLabel("TIME")
+        time_title.setStyleSheet("""
             color: #3498db; 
             font-weight: bold; 
             font-size: 13px;
             background: transparent;
         """)
-        date_value = QLabel(time_parts)
-        date_value.setStyleSheet("color: #bdc3c7; font-size: 12px; background: transparent;")
+        time_value = QLabel(time_parts)
+        time_value.setStyleSheet("color: #bdc3c7; font-size: 12px; background: transparent;")
         
-        right_layout.addWidget(date_title)
-        right_layout.addWidget(date_value)
+        middle_layout.addWidget(time_title)
+        middle_layout.addWidget(time_value)
+        
+        # Right column - Location
+        right_column = QWidget()
+        right_layout = QVBoxLayout(right_column)
+        right_layout.setContentsMargins(0, 0, 0, 0)
+        right_layout.setSpacing(2)
+        
+        location_title = QLabel("LOCATION")
+        location_title.setStyleSheet("""
+            color: #e74c3c; 
+            font-weight: bold; 
+            font-size: 13px;
+            background: transparent;
+        """)
+
+
+        deviceIP = event_data.get('source_device_ip')
+        def get_device_location_by_ip(deviceIP):
+            if os.path.exists('appSettings.json'):
+                with open('appSettings.json', 'r') as f:
+                    data = json.load(f)
+            for device in data.get("devices", []):
+                if device.get("ip") == deviceIP:
+                    return device.get("location", "Location not found")
+            return "Device with this IP not found"
+
+        location = get_device_location_by_ip(deviceIP)
+
+        # Get location from event data - you may need to adjust the key based on your data structure
+        # location = event_data.get('location', event_data.get('deviceName', event_data.get('door', 'N/A')))
+        location_value = QLabel(location)
+        location_value.setStyleSheet("color: #bdc3c7; font-size: 12px; background: transparent;")
+        location_value.setWordWrap(True)
+        
+        right_layout.addWidget(location_title)
+        right_layout.addWidget(location_value)
         
         # Add columns to info layout
         info_layout.addWidget(left_column)
+        info_layout.addWidget(middle_column)
         info_layout.addWidget(right_column)
         
         # Add all widgets to main layout
@@ -1078,74 +1122,37 @@ class AuthEventItem(QFrame):
         
         # Load image if available - do this last
         self.is_deleted = False
-        self.load_image(event_data.get('pictureURL'))
-    
+        self.load_image(event_data.get('pictureURL'))    
+
+
+
+
     def load_image(self, url):
-        """Load image from URL and display it"""
-        # Check minor value to determine which image to display
-        if self.minor == 1:  # Card authentication
-            try:
-                self.image_label.setText("")
-                card_pixmap = QPixmap("card.png")
-                if not card_pixmap.isNull():
-                    scaled_pixmap = card_pixmap.scaled(
-                        self.image_label.width(),
-                        self.image_label.height(),
-                        Qt.KeepAspectRatio,
-                        Qt.SmoothTransformation
-                    )
-                    self.image_label.setPixmap(scaled_pixmap)
-                else:
-                    self.image_label.setText("Card Image Not Found")
-                    self.image_label.setStyleSheet("color: #bdc3c7; background: transparent;")
-            except Exception as e:
-                print(f"Error loading card image: {e}")
-                self.image_label.setText("Card Error")
-                self.image_label.setStyleSheet("color: #e74c3c; background: transparent;")
-            return
-            
-        elif self.minor == 38:  # Fingerprint authentication
-            try:
-                self.image_label.setText("")
-                fp_pixmap = QPixmap("fp.png")
-                if not fp_pixmap.isNull():
-                    scaled_pixmap = fp_pixmap.scaled(
-                        self.image_label.width(),
-                        self.image_label.height(),
-                        Qt.KeepAspectRatio,
-                        Qt.SmoothTransformation
-                    )
-                    self.image_label.setPixmap(scaled_pixmap)
-                else:
-                    self.image_label.setText("FP Image Not Found")
-                    self.image_label.setStyleSheet("color: #bdc3c7; background: transparent;")
-            except Exception as e:
-                print(f"Error loading fingerprint image: {e}")
-                self.image_label.setText("FP Error")
-                self.image_label.setStyleSheet("color: #e74c3c; background: transparent;")
-            return
-            
-        # For other authentication types or when face image is available
         if not url or url == 'N/A':
-            # Set default image if no URL provided
             self.image_label.setText("No Image")
-            self.image_label.setStyleSheet("color: #bdc3c7; background: transparent;")
             return
             
-        try:
-            # Show loading indicator
-            self.image_label.setText("Loading...")
-            self.image_label.setStyleSheet("color: #bdc3c7; background: transparent;")
-            
-            # Create a QTimer to load the image asynchronously
-            self.timer = QTimer()
-            self.timer.timeout.connect(lambda: self._fetch_image(url))
-            self.timer.setSingleShot(True)
-            self.timer.start(100)  # Start after 100ms
-        except Exception as e:
-            print(f"Error loading image: {e}")
-            self.image_label.setText("Error")
-            self.image_label.setStyleSheet("color: #e74c3c; background: transparent;")
+        # Get cached image path from parent
+        parent_window = self.parent()
+        while parent_window and not hasattr(parent_window, 'get_cached_image_path'):
+            parent_window = parent_window.parent()
+        
+        if parent_window:
+            cached_path = parent_window.get_cached_image_path(url)
+            if cached_path and os.path.exists(cached_path):
+                pixmap = QPixmap(cached_path)
+                scaled_pixmap = pixmap.scaled(
+                    self.image_label.width(),
+                    self.image_label.height(),
+                    Qt.KeepAspectRatio,
+                    Qt.SmoothTransformation
+                )
+                self.image_label.setPixmap(scaled_pixmap)
+                return
+        
+        # Fallback to original download method
+        self._fetch_image(url)
+
     
     def _fetch_image(self, url):
         try:
@@ -1176,7 +1183,7 @@ class AuthEventItem(QFrame):
                 device_config = DEVICES[device_ip]['device']
                 username = device_config['user']
                 password = device_config['password']
-                logging.info(f"Using device-specific credentials for {device_ip} to fetch image")
+                # logging.info(f"Using device-specific credentials for {device_ip} to fetch image")
             
             # Use requests with digest authentication
             response = requests.get(
@@ -1201,7 +1208,7 @@ class AuthEventItem(QFrame):
                 if hasattr(self, 'is_deleted') and self.is_deleted:
                     return
                 
-                # Scale pixmap to fit the label while preserving aspect ratio
+                # Scale pixmap to fit the current label size (which is now responsive)
                 scaled_pixmap = pixmap.scaled(
                     self.image_label.width(),
                     self.image_label.height(),
@@ -1244,11 +1251,36 @@ class AuthEventItem(QFrame):
 class EzeeCanteen(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.initial_settings = {}
+        self.image_cache = {}  # url -> local_file_path mapping
+
+        # Try to load existing settings first to preserve any settings we're not modifying
+        if os.path.exists('appSettings.json'):
+            with open('appSettings.json', 'r') as f:
+                self.initial_settings = json.load(f)
+        
+        canteenMenu = self.initial_settings.get('CanteenMenu')
+        mode = canteenMenu.get('currentMode')
+        # print("MODE : ", mode)
+
+        self.CurrMealTime = []
+        self.CurrFromTime = None
+        self.CurrToTime = None
+        if mode == "timeBased": 
+            self.CurrMealTime = self.initial_settings['CanteenMenu']['MealSchedule']
+            if self.CurrMealTime:
+                self.CurrFromTime = self.CurrMealTime[0]['fromTime']
+                self.CurrToTime = self.CurrMealTime[0]['toTime']
+
+            # print(f"Current Meal time is : {self.CurrMealTime}")
+
+        self.current_date = datetime.now().date()
+
         self.communicator = Communicator()
         self.events = []
-        self.max_events = 100  # Increased maximum number of events from 18 to 100
-        self.token_counter = 0  # Initialize token counter
-        self.current_date = datetime.now().date()  # Track date for token counter reset
+        self.max_events = 21  # Increased maximum number of events to 18
+        self.token_counter = 0  # Initialize token counter                   
+        self.last_meal_from_time = None  # Track meal time changes
         self.settings_mode = False  # Flag to indicate if we're in settings mode
         self.parent_window = None  # Reference to parent window if in settings mode
         self.resized = False  # Initialize the resized attribute
@@ -1268,6 +1300,215 @@ class EzeeCanteen(QMainWindow):
         # This allows the UI to render first before doing network operations
         QTimer.singleShot(100, self.delayed_initialization)
     
+    
+    def get_cached_image_path(self, url):
+        """Get cached image path or download if not cached"""
+        if url in self.image_cache:
+            cached_path = self.image_cache[url]
+            if os.path.exists(cached_path):
+                return cached_path
+        
+        # Download and cache
+        unique_id = str(uuid.uuid4())
+        filename = os.path.join(TEMP_DIR, f"image_{unique_id}.jpg")
+        
+        # Download logic here...
+        # After successful download:
+        self.image_cache[url] = filename
+        return filename
+
+
+    def initialize_token_counter(self):
+        """Initialize token counter based on existing punches during current meal time"""
+        try:
+            # Get current time
+            current_time = datetime.now().strftime('%H:%M')
+            current_date = datetime.now().strftime('%Y-%m-%d')
+            
+            # Determine current meal time
+            current_meal_from_time = None
+            current_meal_to_time = None
+            
+            # Check if CurrMealTime exists and is not empty
+            if hasattr(self, 'CurrMealTime') and self.CurrMealTime:
+                for meal in self.CurrMealTime:
+                    from_time = meal.get('fromTime', '')
+                    to_time = meal.get('toTime', '')
+                    
+                    if from_time and to_time and from_time <= current_time <= to_time:
+                        current_meal_from_time = from_time
+                        current_meal_to_time = to_time
+                        logging.info(f"Current meal time: {from_time} to {to_time}")
+                        break
+            else:
+                # If no meal schedule is configured, check if we're in device mode
+                canteenMenu = self.initial_settings.get('CanteenMenu', {})
+                mode = canteenMenu.get('currentMode')
+                
+                if mode == "device":
+                    # In device mode, we don't use time-based restrictions
+                    logging.info("Device mode detected - no time-based meal restrictions")
+                    self.token_counter = 0
+                    self.update_title_counter()
+                    return
+                else:
+                    # No meal schedule available and not in device mode
+                    logging.warning("No meal schedule configured and not in device mode")
+                    self.token_counter = 0
+                    self.update_title_counter()
+                    return
+            
+            # If we're not in any meal time, set counter to 0
+            if not current_meal_from_time or not current_meal_to_time:
+                self.token_counter = 0
+                logging.info("Not in meal time - token counter set to 0")
+                self.update_title_counter()
+                return
+            
+            # Get license key for database query
+            license_key = ""
+            try:
+                license_manager = LicenseManager()
+                
+                def get_license_data():
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    try:
+                        license_data = loop.run_until_complete(license_manager.get_license_db())
+                        return license_data
+                    finally:
+                        loop.close()
+                
+                license_data = get_license_data()
+                if license_data and 'LicenseKey' in license_data:
+                    license_key = license_data['LicenseKey']
+                    # logging.info(f"Retrieved license key for token counter: {license_key}")
+            except Exception as e:
+                logging.error(f"Error getting license key: {e}")
+            
+            # Query database for punches during current meal time
+            punch_count = 0
+            try:
+                conn = mysql.connector.connect(
+                    host=DB_HOST,
+                    user=DB_USER,
+                    port=DB_PORT,
+                    password=DB_PASS,
+                    database=DB_NAME,
+                    connection_timeout=5
+                )
+                
+                cursor = conn.cursor()
+                
+                # Create datetime strings for the current meal period
+                meal_start_datetime = f"{current_date} {current_meal_from_time}:00"
+                meal_end_datetime = f"{current_date} {current_meal_to_time}:59"
+                
+                # Query to count punches during current meal time
+                if license_key:
+                    # Query with license key filter
+                    sql = f"""
+                        SELECT COUNT(*) as punch_count 
+                        FROM {DB_TABLE} 
+                        WHERE PunchDateTime >= %s 
+                        AND PunchDateTime <= %s 
+                        AND LicenseKey = %s
+                        AND DATE(PunchDateTime) = %s
+                        AND CanteenMode = 'timeBase'
+                    """
+                    cursor.execute(sql, (meal_start_datetime, meal_end_datetime, license_key, current_date))
+                else:
+                    # Fallback query without license key
+                    sql = f"""
+                        SELECT COUNT(*) as punch_count 
+                        FROM {DB_TABLE} 
+                        WHERE PunchDateTime >= %s 
+                        AND PunchDateTime <= %s 
+                        AND DATE(PunchDateTime) = %s
+                        AND CanteenMode = 'timeBase'
+                    """
+                    cursor.execute(sql, (meal_start_datetime, meal_end_datetime, current_date))
+                
+                result = cursor.fetchone()
+                punch_count = result[0] if result else 0
+                
+                cursor.close()
+                conn.close()
+                
+                logging.info(f"Found {punch_count} existing punches for current meal time ({current_meal_from_time} - {current_meal_to_time})")
+                
+            except mysql.connector.Error as err:
+                logging.error(f"Database error while fetching punch count: {err}")
+                punch_count = 0
+            except Exception as e:
+                logging.error(f"Unexpected error fetching punch count: {e}")
+                punch_count = 0
+            
+            # Set token counter to existing punch count
+            self.token_counter = punch_count
+            logging.info(f"Token counter initialized to {self.token_counter}")
+            
+            # Update title with current counter
+            self.update_title_counter()
+            
+        except Exception as e:
+            logging.error(f"Error initializing token counter: {e}")
+            self.token_counter = 0
+            if hasattr(self, 'update_title_counter'):
+                self.update_title_counter()
+                
+    def get_current_meal_info(self):
+        """Get current meal information including from/to times"""
+        try:
+            current_time = datetime.now().strftime('%H:%M')
+            
+            for meal in self.CurrMealTime:
+                from_time = meal.get('fromTime', '')
+                to_time = meal.get('toTime', '')
+                meal_type = meal.get('mealType', 'MEAL')
+                
+                if from_time and to_time and from_time <= current_time <= to_time:
+                    return {
+                        'fromTime': from_time,
+                        'toTime': to_time,
+                        'mealType': meal_type,
+                        'inMealTime': True
+                    }
+            
+            return {
+                'fromTime': None,
+                'toTime': None,
+                'mealType': None,
+                'inMealTime': False
+            }
+        except Exception as e:
+            logging.error(f"Error getting current meal info: {e}")
+            return {
+                'fromTime': None,
+                'toTime': None,
+                'mealType': None,
+                'inMealTime': False
+            }
+
+    def reset_token_counter_for_new_meal(self):
+        """Reset token counter when entering a new meal time"""
+        try:
+            current_meal = self.get_current_meal_info()
+            
+            # Check if we've entered a new meal time
+            if (hasattr(self, 'last_meal_from_time') and 
+                current_meal['fromTime'] != self.last_meal_from_time and
+                current_meal['inMealTime']):
+                
+                logging.info(f"Entered new meal time: {current_meal['fromTime']} - {current_meal['toTime']}")
+                self.initialize_token_counter()
+            
+            # Update last meal time
+            self.last_meal_from_time = current_meal['fromTime']
+            
+        except Exception as e:
+            logging.error(f"Error checking for new meal time: {e}")
+
     def delayed_initialization(self):
         """Perform heavy initialization tasks after UI is rendered"""
         # Test database connection
@@ -1275,7 +1516,9 @@ class EzeeCanteen(QMainWindow):
         
         # Initialize devices and start monitors
         self.initialize_devices()
-        
+        # Initialize token counter based on current meal time punches
+        self.initialize_token_counter()
+
         # Set up timer to periodically check printer connections
         self.printer_check_timer = QTimer(self)
         self.printer_check_timer.timeout.connect(self.test_printer_connections)
@@ -1289,7 +1532,7 @@ class EzeeCanteen(QMainWindow):
         
         # Ensure active_devices is initialized
         if not hasattr(self, 'active_devices'):
-            logging.info("Re-initializing active_devices dictionary")
+            # logging.info("Re-initializing active_devices dictionary")
             self.active_devices = {}
         
         if not DEVICES:
@@ -1298,7 +1541,7 @@ class EzeeCanteen(QMainWindow):
             self.setup_single_device_monitor()
             return
             
-        logging.info(f"Initializing {len(DEVICES)} authentication devices")
+        # logging.info(f"Initializing {len(DEVICES)} authentication devices")
         
         # Create a worker thread to fetch device details
         class DeviceInitWorker(QThread):
@@ -1348,7 +1591,7 @@ class EzeeCanteen(QMainWindow):
             }
             
             # Log the device-to-printer mapping
-            logging.info(f"Device {device_ip} mapped to printer {printer_config['ip']}:{printer_config.get('port', 9100)}")
+            # logging.info(f"Device {device_ip} mapped to printer {printer_config['ip']}:{printer_config.get('port', 9100)}")
         
         # Connect the signal to handle authentication events
         self.communicator.new_auth_event.connect(self.add_auth_event)
@@ -1373,7 +1616,7 @@ class EzeeCanteen(QMainWindow):
         
         # Initialize active_devices if it doesn't exist
         if not hasattr(self, 'active_devices'):
-            logging.info("Initializing active_devices dictionary")
+            # logging.info("Initializing active_devices dictionary")
             self.active_devices = {}
             
         # Process each device
@@ -1398,7 +1641,7 @@ class EzeeCanteen(QMainWindow):
                 'mac': device_mac
             }
             
-            logging.info(f"Started monitor for device {device_ip}:{device_config['port']} with serial {device_serial}")
+            # logging.info(f"Started monitor for device {device_ip}:{device_config['port']} with serial {device_serial}")
         
         # Clean up
         self.device_init_worker = None
@@ -1440,7 +1683,7 @@ class EzeeCanteen(QMainWindow):
                 if printer_data:
                     self.printer_ip = printer_data['IP']
                     self.printer_port = printer_data['Port'] if printer_data['Port'] else 9100
-                    logging.info(f"Using printer from database: {self.printer_ip}:{self.printer_port}")
+                    # logging.info(f"Using printer from database: {self.printer_ip}:{self.printer_port}")
                 else:
                     # If no printer found in DB, fall back to app settings
                     with open('appSettings.json', 'r') as f:
@@ -1524,7 +1767,7 @@ class EzeeCanteen(QMainWindow):
                     unique_printers[printer_key]['devices'].append(device_ip)
                 
                 # Test each unique printer
-                logging.info(f"Testing {len(unique_printers)} unique printer connections")
+                # logging.info(f"Testing {len(unique_printers)} unique printer connections")
                 for printer_key, printer_info in unique_printers.items():
                     try:
                         # Check printer connection with short timeout
@@ -1539,10 +1782,7 @@ class EzeeCanteen(QMainWindow):
                         for device_ip in printer_info['devices']:
                             self.results[device_ip] = available
                         
-                        if available:
-                            logging.info(f"Printer {printer_info['ip']}:{printer_info['port']} connection successful (for {len(printer_info['devices'])} devices)")
-                        else:
-                            logging.warning(f"Printer {printer_info['ip']}:{printer_info['port']} connection failed (for {len(printer_info['devices'])} devices)")
+                        
                     except Exception as e:
                         # Handle socket errors gracefully
                         logging.error(f"Error testing printer {printer_info['ip']}:{printer_info['port']}: {e}")
@@ -1671,7 +1911,7 @@ class EzeeCanteen(QMainWindow):
                 
             def run(self):
                 try:
-                    logging.info(f"Testing database connection to {DB_HOST}:{DB_PORT}")
+                    # logging.info(f"Testing database connection to {DB_HOST}:{DB_PORT}")
                     conn = mysql.connector.connect(
                         host=DB_HOST,
                         user=DB_USER,
@@ -1704,7 +1944,7 @@ class EzeeCanteen(QMainWindow):
         self.db_test_worker = None
    
     def insert_to_database(self, event_data):
-        print("event_data",event_data)
+        # print("event_data",event_data)
         """Insert authentication data into the database"""
         # if not hasattr(self, 'db_available') or not self.db_available:
         #     print("Skipping database insertion - database not available")
@@ -1844,12 +2084,16 @@ class EzeeCanteen(QMainWindow):
                 license_data = get_license_data()
                 if license_data and 'LicenseKey' in license_data:
                     license_key = license_data['LicenseKey']
-                    logging.info(f"Retrieved license key for database insertion: {license_key}")
+                    # logging.info(f"Retrieved license key for database insertion: {license_key}")
                 else:
                     logging.warning("Could not retrieve license key for database insertion")
             except Exception as e:
                 logging.error(f"Error getting license key: {e}")
             
+
+            canteenMenu = app_settings.get('CanteenMenu')
+            mode = canteenMenu.get('currentMode')
+
             # Prepare SQL query
             sql = f"""
                 INSERT INTO {DB_TABLE} (
@@ -1859,6 +2103,8 @@ class EzeeCanteen(QMainWindow):
                 ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
             
+
+
             # Get device serial based on which device generated the event
             serial_no = ""
             if hasattr(self, 'active_devices') and device_ip in self.active_devices:
@@ -1870,32 +2116,64 @@ class EzeeCanteen(QMainWindow):
             if not serial_no:
                 serial_no = event_data.get('serialNo', '')
             
-            # Prepare values
-            values = (
-                int(emp_id) if emp_id.isdigit() else 0,  # PunchCardNo
-                punch_datetime,                         # PunchDateTime
-                punch_pic_url,                          # PunchPicURL
-                recognition_mode,                       # RecognitionMode
-                device_ip,                              # IPAddress - Use the actual device IP
-                attendance_status,                      # AttendanceStatus
-                DB_NAME,                                # DB
-                att_in_out,                             # AttInOut
-                'Y',                                    # Inserted
-                serial_no,                              # ZK_SerialNo
-                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),  # LogTransferDate
-                'timeBase',                             # CanteenMode
-                meal_type,                              # Fooditem
-                total_price,                            # totalAmount
-                license_key                             # LicenseKey
-            )
+
+            if mode == "timeBased":
+                # Prepare values
+                values = (
+                    int(emp_id) if emp_id.isdigit() else 0,  # PunchCardNo
+                    punch_datetime,                         # PunchDateTime
+                    punch_pic_url,                          # PunchPicURL
+                    recognition_mode,                       # RecognitionMode
+                    device_ip,                              # IPAddress - Use the actual device IP
+                    attendance_status,                      # AttendanceStatus
+                    DB_NAME,                                # DB
+                    att_in_out,                             # AttInOut
+                    'Y',                                    # Inserted
+                    serial_no,                              # ZK_SerialNo
+                    datetime.now().strftime("%Y-%m-%d %H:%M:%S"),  # LogTransferDate
+                    'timeBase',                             # CanteenMode
+                    meal_type,                              # Fooditem
+                    total_price,                            # totalAmount
+                    license_key                             # LicenseKey
+                )
+                
+                # Execute query
+                cursor.execute(sql, values)
+                
+                # Commit the transaction
+                conn.commit()
             
-            # Execute query
-            cursor.execute(sql, values)
+                print(f"Successfully inserted authentication data for employee {emp_id} with meal type {meal_type} into database")
+           
+            elif mode  == "device":
+                # Prepare values
+                meal_type = event_data.get('label','N/A')
+
+                values = (
+                    int(emp_id) if emp_id.isdigit() else 0,  # PunchCardNo
+                    punch_datetime,                         # PunchDateTime
+                    punch_pic_url,                          # PunchPicURL
+                    recognition_mode,                       # RecognitionMode
+                    device_ip,                              # IPAddress - Use the actual device IP
+                    attendance_status,                      # AttendanceStatus
+                    DB_NAME,                                # DB
+                    att_in_out,                             # AttInOut
+                    'Y',                                    # Inserted
+                    serial_no,                              # ZK_SerialNo
+                    datetime.now().strftime("%Y-%m-%d %H:%M:%S"),  # LogTransferDate
+                    'device',                             # CanteenMode
+                    meal_type,                              # Fooditem
+                    0,                            # totalAmount
+                    license_key                             # LicenseKey
+                )
+                
+                # Execute query
+                cursor.execute(sql, values)
+                
+                # Commit the transaction
+                conn.commit()
             
-            # Commit the transaction
-            conn.commit()
-            
-            print(f"Successfully inserted authentication data for employee {emp_id} with meal type {meal_type} into database")
+                print(f"Successfully inserted authentication data for employee {emp_id} with meal type {meal_type} into database")
             
         except Exception as e:
             print(f"Error inserting data into database: {e}")
@@ -1969,7 +2247,10 @@ class EzeeCanteen(QMainWindow):
         
         lock_icon.setStyleSheet("background: transparent;")
         
-        title_label = QLabel("Live Display | EzeeCanteen")
+        # title_label = QLabel(f"Live Display | EzeeCanteen {self.token_counter}")
+        self.title_label = QLabel(f"Live Display | Count [{self.token_counter}")
+        title_label = self.title_label  # Keep local reference for layout
+
         title_label.setStyleSheet("color: white; font-weight: bold; background: transparent;")
         title_label.setFont(QFont("Arial", 20))
         title_label.setAlignment(Qt.AlignCenter)
@@ -2110,18 +2391,26 @@ class EzeeCanteen(QMainWindow):
         main_layout.addWidget(header_frame)
         main_layout.addWidget(scroll_area, 1)
         main_layout.addWidget(footer_frame)
-    
+    def update_title_counter(self):
+        """Update the title label with current token counter"""
+        if hasattr(self, 'title_label') and not sip.isdeleted(self.title_label):
+            self.title_label.setText(f"Live Display | Count [{self.token_counter}]")
+
     def add_auth_event(self, event_data):
         """Add a new authentication event to the grid and print a token"""
+
+        # Check if we've entered a new meal time and reset counter if needed
+        self.reset_token_counter_for_new_meal()
+
         # Check if the minor value is one of the supported authentication types
         minor = event_data.get('minor', 0)
         if minor not in [1, 38, 75]:
-            print(f"Skipping event with unsupported minor value: {minor}")
+            # print(f"Skipping event with unsupported minor value: {minor}")
             return
         
         # Add event to the list
         if(event_data.get('employeeNoString')):
-            print(f"event_data{event_data}\n\n")
+            # print(f"event_data{event_data}\n\n")
             # Add event to the end of list, then sort by time
             self.events.append(event_data)
             # Sort events by time in descending order (most recent first)
@@ -2140,13 +2429,13 @@ class EzeeCanteen(QMainWindow):
                         # Get the source device IP from the event data
                         source_device_ip = event_data.get('source_device_ip')
                         
-                        print("THOS IOS TJHE OMNAME OF TJHE EM<PT: ", emp_name)
-                        print(f"\n----------------------------------------\nemp_name: {emp_name}\nemp_id: {emp_id}\n----------------------------------------\n")
+                        # print("THOS IOS TJHE OMNAME OF TJHE EM<PT: ", emp_name)
+                        # print(f"\n----------------------------------------\nemp_name: {emp_name}\nemp_id: {emp_id}\n----------------------------------------\n")
                         if emp_id and emp_name:
-                            print("BOTHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH")
+                            # print("BOTHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH")
                             self.update_user_begin_time(emp_id, emp_name, app_settings, source_device_ip)
                         elif emp_id:
-                            print("SINGLEEEEEEEEEEEEEEEEEEEEEEEEEEEEE")
+                            # print("SINGLEEEEEEEEEEEEEEEEEEEEEEEEEEEEE")
                             self.update_user_begin_time(emp_id, None, app_settings, source_device_ip)
                         else:
                             print(f"No employee ID or name found for event data: {event_data}")
@@ -2165,12 +2454,16 @@ class EzeeCanteen(QMainWindow):
             
             # Generate and print token
             self.token_counter += 1
-            
+            self.update_title_counter()
+
             # Extract data for token
             emp_id = event_data.get('employeeNoString', event_data.get('employeeNo', 'N/A'))
             name = event_data.get('name', 'N/A')
             punch_time = event_data.get('time', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-            
+            user_order = event_data.get('label','N/A')
+
+
+
             # Format punch time if needed
             if 'T' in punch_time:
                 punch_time = punch_time.replace('T', ' ').split('+')[0]
@@ -2238,7 +2531,7 @@ class EzeeCanteen(QMainWindow):
             # First check if source_device_ip is directly available in the event data
             if 'source_device_ip' in event_data:
                 source_ip = event_data['source_device_ip']
-                logging.info(f"Using source device IP from event data: {source_ip}")
+                # logging.info(f"Using source device IP from event data: {source_ip}")
             # If source_device_ip is not in event data, try to determine it from deviceIP
             elif 'deviceIP' in event_data:
                 device_ip = event_data['deviceIP']
@@ -2266,7 +2559,7 @@ class EzeeCanteen(QMainWindow):
                 printer_available = printer['available']
                 printer_ip = printer['ip']
                 printer_port = printer['port']
-                logging.info(f"Using printer {printer_ip}:{printer_port} for device {source_ip}")
+                # logging.info(f"Using printer {printer_ip}:{printer_port} for device {source_ip}")
             # Legacy fallback - if no device-specific printer found but we have a default printer
             elif hasattr(self, 'printer_available') and self.printer_available:
                 # Legacy mode - use the single printer
@@ -2276,9 +2569,9 @@ class EzeeCanteen(QMainWindow):
                 logging.info(f"Using legacy printer {printer_ip}:{printer_port}")
             
             # Log the printer selection information
-            print(f"Device source: {source_ip}")
-            print(f"Selected printer: {printer_ip}:{printer_port}")
-            print(f"Printer available: {printer_available}")
+            # print(f"Device source: {source_ip}")
+            # print(f"Selected printer: {printer_ip}:{printer_port}")
+            # print(f"Printer available: {printer_available}")
             
             # Attempt to print token if printer is available
             if printer_available and printer_ip and printer_port:
@@ -2288,7 +2581,16 @@ class EzeeCanteen(QMainWindow):
                     s.settimeout(0.5)  # 0.5 second timeout
                     result = s.connect_ex((printer_ip, printer_port))
                     s.close()
-                    
+                    canteenMenu = app_settings.get('CanteenMenu')
+                    mode = canteenMenu.get('currentMode')
+                    print("MODE : ", mode)
+
+                    if mode == "device": 
+                        order = user_order
+                    elif mode == "timeBased":
+                        order = coupon_type
+                    else:
+                        order = "Meal"
                     if result == 0:
                         # Printer is available, print the token
                         print_slip(  
@@ -2296,7 +2598,7 @@ class EzeeCanteen(QMainWindow):
                             printer_port, 
                             0, 
                             self.header if hasattr(self, 'header') else {'enable': True, 'text': "EzeeCanteen"}, 
-                            coupon_type, 
+                            order, 
                             emp_id, 
                             name, 
                             punch_time, 
@@ -2337,16 +2639,16 @@ class EzeeCanteen(QMainWindow):
         
             # Print to console for debugging
             print("\n========== NEW AUTHENTICATION ==========")
-            print(f"Time: {event_data.get('time')}")
+            # print(f"Time: {event_data.get('time')}")
             print(f"Employee No: {event_data.get('employeeNoString', event_data.get('employeeNo', 'N/A'))}")
             print(f"Name: {event_data.get('name', 'N/A')}")
-            print(f"FaceURL: {event_data.get('pictureURL', 'N/A')}")
+            # print(f"FaceURL: {event_data.get('pictureURL', 'N/A')}")
             
             # Check for attendance info
-            if "AttendanceInfo" in event_data:
-                att = event_data["AttendanceInfo"]
-                print(f"Attendance Status: {att.get('attendanceStatus', 'N/A')}")
-                print(f"Label: {att.get('labelName', 'N/A')}")
+            # if "AttendanceInfo" in event_data:
+            #     att = event_data["AttendanceInfo"]
+            #     print(f"Attendance Status: {att.get('attendanceStatus', 'N/A')}")
+                # print(f"Label: {att.get('labelName', 'N/A')}")
             
             print("======================================")
         else:
@@ -2409,7 +2711,7 @@ class EzeeCanteen(QMainWindow):
                         'user': device_info['monitor'].username,
                         'password': device_info['monitor'].password
                     }
-                    logging.info(f"Using source device {device_ip} for updating begin time")
+                    # logging.info(f"Using source device {device_ip} for updating begin time")
                 else:
                     # Fallback to first device if source device not found
                     device_ip = next(iter(self.active_devices))
@@ -2632,7 +2934,6 @@ class EzeeCanteen(QMainWindow):
     
     def populate_grid(self):
         """Populate grid with authentication events"""
-        # Check if grid_layout still exists and is valid
         if not hasattr(self, 'grid_layout') or sip.isdeleted(self.grid_layout):
             return
             
@@ -2642,21 +2943,30 @@ class EzeeCanteen(QMainWindow):
         # Determine number of columns based on window width
         window_width = self.width()
         
-        # Determine columns based on window width - adjusted to fit more items
+        # Your new column configuration
         if window_width >= 1600:
             cols = 7  # More columns for very wide windows
         elif window_width >= 1280:
-            cols = 6  # 6 columns in wide window
+            cols = 5  # 5 columns in wide window
         elif window_width >= 900:
-            cols = 5  # 5 columns in medium window
+            cols = 4  # 4 columns in medium window
         elif window_width >= 768:
-            cols = 4  # 4 columns in smaller medium window
+            cols = 3  # 3 columns in smaller medium window
         else:
-            cols = 3  # 3 columns in small window
+            cols = 2  # 2 columns in small window
         
-        # Reduce spacing for tighter layout
+        # Calculate available width for cards
+        scroll_area_width = self.centralWidget().findChild(QScrollArea).width()
+        scrollbar_width = 20  # Account for scrollbar
+        margin_spacing = 30  # Account for margins (15px each side)
+        grid_spacing = 4 * (cols - 1)  # Spacing between cards
+        
+        available_width = scroll_area_width - scrollbar_width - margin_spacing - grid_spacing
+        card_width = available_width // cols
+        
+        # Set spacing and alignment
         self.grid_layout.setSpacing(4)
-        self.grid_layout.setAlignment(Qt.AlignTop | Qt.AlignLeft)  # Ensure top-left alignment
+        self.grid_layout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
         
         # Populate grid with sorted events
         for i, event in enumerate(sorted_events):
@@ -2664,8 +2974,11 @@ class EzeeCanteen(QMainWindow):
             col = i % cols
             
             event_item = AuthEventItem(event)
+            
+            # Set the calculated width for each card
+            event_item.setFixedWidth(card_width)
+            
             self.grid_layout.addWidget(event_item, row, col)
-            # Reset the alignment for each widget to ensure they fill their cells
             self.grid_layout.setAlignment(event_item, Qt.AlignTop | Qt.AlignLeft)
     
     def closeEvent(self, event):
@@ -2745,7 +3058,7 @@ def main():
                 logging.StreamHandler()
             ]
         )
-        logging.info("EzeeCanteen application starting")
+        # logging.info("EzeeCanteen application starting")
     except Exception as e:
         print(f"Error initializing logging: {e}")
     
@@ -2753,7 +3066,7 @@ def main():
         app = QApplication(sys.argv)
     
     # Always refresh device configurations when entering from settings.py
-    logging.info("Refreshing device and printer configurations...")
+    # logging.info("Refreshing device and printer configurations...")
     fetch_device_config(force_refresh=True)
     print_server_addresses()  # Print refreshed server addresses
     
@@ -2767,7 +3080,7 @@ def main():
     
     # Ensure critical attributes are initialized
     if not hasattr(window, 'active_devices'):
-        logging.info("Initializing active_devices in main()")
+        # logging.info("Initializing active_devices in main()")
         window.active_devices = {}
     
     if standalone:
@@ -2788,5 +3101,4 @@ def main():
         return window
         
 if __name__ == '__main__':
-    main()
-        
+    main()  

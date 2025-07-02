@@ -41,7 +41,7 @@ class LicenseManager:
         # File paths
         self.USER_DATA_PATH = self.get_user_data_path()
         self.LICENSE_FILE_PATH = os.path.join(self.USER_DATA_PATH, "license.json")
-        print(f"license file path : {self.LICENSE_FILE_PATH}")
+        # print(f"license file path : {self.LICENSE_FILE_PATH}")
         # Ensure directory exists
         os.makedirs(self.USER_DATA_PATH, exist_ok=True)
     def get_user_data_path(self):
@@ -137,7 +137,7 @@ class LicenseManager:
                 # Use a timestamp-based fallback as last resort
                 machine_id = hashlib.sha256(f"{time.time()}-fallback-id".encode()).hexdigest()
                 
-            print(f"Machine ID: {machine_id}")
+            # print(f"Machine ID: {machine_id}")
             return machine_id
         except Exception as e:
             logging.error(f"Error retrieving device ID: {e}")
@@ -163,7 +163,7 @@ class LicenseManager:
             connection = await self.get_db_connection()
             cursor = connection.cursor()
             
-            query = "SELECT * FROM license WHERE DeviceID = %s"
+            query = "SELECT * FROM license WHERE DeviceID = %s AND AppModule = 'CanteenMS'"
             cursor.execute(query, (current_device_id,))
             result = cursor.fetchone()
             cursor.close()
@@ -184,10 +184,10 @@ class LicenseManager:
             connection = await self.get_db_connection()
             cursor = connection.cursor(dictionary=True)
             
-            query = "SELECT * FROM license WHERE DeviceID = %s"
+            query = "SELECT * FROM license WHERE DeviceID = %s AND AppModule = 'CanteenMS'"
             cursor.execute(query, (current_device_id,))
             result = cursor.fetchone()
-            print(f"license details : {result}")
+            # print(f"license details : {result}")
             cursor.close()
             connection.close()
             
@@ -237,8 +237,8 @@ class LicenseManager:
             
             with open(self.LICENSE_FILE_PATH, 'w', encoding='utf-8') as f:
                 json.dump(encrypted_data, f, indent=4)
-            print(f"license file path : {self.LICENSE_FILE_PATH}")
-            print("License saved in local file")
+            # print(f"license file path : {self.LICENSE_FILE_PATH}")
+            # print("License saved in local file")
             return {'success': True, 'message': 'LicenseSaved'}
         except Exception as e:
             logging.error(f"Error saving license data: {e}")
@@ -252,7 +252,7 @@ class LicenseManager:
             print(f"Activating license with key: {key}")
             # Try to get device ID first to diagnose any issues there
             device_id = await self.get_device_id()
-            print(f"Machine ID: {device_id}")
+            # print(f"Machine ID: {device_id}")
             
             # Connect to database
             try:
@@ -401,7 +401,7 @@ class LicenseManager:
             
             try:
                 db_record_exists = await self.check_license_exist_db()
-                print(f"Database record exists: {db_record_exists}")
+                # print(f"Database record exists: {db_record_exists}")
             except Exception as db_err:
                 error_msg = f"Database check failed: {db_err}"
                 logging.error(error_msg)

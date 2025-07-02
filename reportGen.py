@@ -1831,13 +1831,13 @@ if __name__ == "__main__":
 
 
     license_data = get_license_data()
-    print(f"\n\n\n\n\n\n")
+    # print(f"\n\n\n\n\n\n")
     print(license_data['LicenseKey'])
     if license_data and 'LicenseKey' in license_data:
         license_key = license_data['LicenseKey']
         # print(f"Retrieved license key for database insertion: {license_key}")
-    # else:
-    #     print("Could not retrieve license key for database insertion")
+    else:
+        print("Could not retrieve license key")
 
     # Generate traditional reports for May 2025
     # generate_monthly_report(2025, 5)

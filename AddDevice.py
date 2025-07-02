@@ -2,7 +2,7 @@ import sys
 import json
 import os
 import mysql.connector
-from datetime import datetime
+from datetime import datetime   
 import requests
 from requests.auth import HTTPDigestAuth
 import re

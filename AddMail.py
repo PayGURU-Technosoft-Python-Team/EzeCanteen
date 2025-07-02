@@ -81,7 +81,7 @@ def send_daily_report_email(date=None):
             license_data = get_license_data()
             if license_data and 'LicenseKey' in license_data:
                 license_key = license_data['LicenseKey']
-                logging.info(f"Retrieved license key for database insertion: {license_key}")
+                # logging.info(f"Retrieved license key for database insertion: {license_key}")
             else:
                 logging.warning("Could not retrieve license key for database insertion")
         except Exception as e:
@@ -255,7 +255,7 @@ def send_monthly_report_email(year=None, month=None):
             license_data = get_license_data()
             if license_data and 'LicenseKey' in license_data:
                 license_key = license_data['LicenseKey']
-                logging.info(f"Retrieved license key for database insertion: {license_key}")
+                # logging.info(f"Retrieved license key for database insertion: {license_key}")
             else:
                 logging.warning("Could not retrieve license key for database insertion")
         except Exception as e:
@@ -501,7 +501,7 @@ def send_combined_reports_email(date=None):
             license_data = get_license_data()
             if license_data and 'LicenseKey' in license_data:
                 license_key = license_data['LicenseKey']
-                logging.info(f"Retrieved license key for database insertion: {license_key}")
+                # logging.info(f"Retrieved license key for database insertion: {license_key}")
             else:
                 logging.warning("Could not retrieve license key for database insertion")
         except Exception as e:

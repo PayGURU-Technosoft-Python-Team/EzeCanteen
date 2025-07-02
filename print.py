@@ -20,7 +20,7 @@ def print_slip(ip, port, CouponCount, header, CouponType, id, name, punchTime, s
         # Create a socket connection
         printer = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         printer.connect((ip, port))
-        print("Connected to printer")
+        # print("Connected to printer")
         
         # Define commands
         INIT_PRINTER = b'\x1B\x40'  # Initialize printer
@@ -82,12 +82,12 @@ def print_slip(ip, port, CouponCount, header, CouponType, id, name, punchTime, s
 # Example usage:
 if __name__ == "__main__":
     # Define parameters
-    printer_ip = "192.168.1.2"  # Replace with your printer's IP
+    printer_ip = "192.168.1.251"  # Replace with your printer's IP
     printer_port = 9100  # Common port for printer communication
     
     # Example data
     coupon_count = 42
-    header = {'enable': True, 'text': "COMPANY NAME"}
+    header = {'enable': False, 'text': "COMPANY NAME"}
     coupon_type = "LUNCH COUPON"
     user_id = "EMP001"
     user_name = ""
