@@ -1097,7 +1097,7 @@ class AuthEventItem(QFrame):
             for device in data.get("devices", []):
                 if device.get("ip") == deviceIP:
                     return device.get("location", "Location not found")
-            return "Device with this IP not found"
+            return "N/A"
 
         location = get_device_location_by_ip(deviceIP)
 
@@ -1128,6 +1128,48 @@ class AuthEventItem(QFrame):
 
 
     def load_image(self, url):
+        if self.minor == 1:  # Card authentication
+            try:
+                self.image_label.setText("")
+                card_pixmap = QPixmap("card.png")
+                if not card_pixmap.isNull():
+                    scaled_pixmap = card_pixmap.scaled(
+                        self.image_label.width(),
+                        self.image_label.height(),
+                        Qt.KeepAspectRatio,
+                        Qt.SmoothTransformation
+                    )
+                    self.image_label.setPixmap(scaled_pixmap)
+                else:
+                    self.image_label.setText("Card Image Not Found")
+                    self.image_label.setStyleSheet("color: #bdc3c7; background: transparent;")
+            except Exception as e:
+                print(f"Error loading card image: {e}")
+                self.image_label.setText("Card Error")
+                self.image_label.setStyleSheet("color: #e74c3c; background: transparent;")
+            return
+            
+        elif self.minor == 38:  # Fingerprint authentication
+            try:
+                self.image_label.setText("")
+                fp_pixmap = QPixmap("fp.png")
+                if not fp_pixmap.isNull():
+                    scaled_pixmap = fp_pixmap.scaled(
+                        self.image_label.width(),
+                        self.image_label.height(),
+                        Qt.KeepAspectRatio,
+                        Qt.SmoothTransformation
+                    )
+                    self.image_label.setPixmap(scaled_pixmap)
+                else:
+                    self.image_label.setText("FP Image Not Found")
+                    self.image_label.setStyleSheet("color: #bdc3c7; background: transparent;")
+            except Exception as e:
+                print(f"Error loading fingerprint image: {e}")
+                self.image_label.setText("FP Error")
+                self.image_label.setStyleSheet("color: #e74c3c; background: transparent;")
+            return
+            
         if not url or url == 'N/A':
             self.image_label.setText("No Image")
             return
@@ -1316,7 +1358,6 @@ class EzeeCanteen(QMainWindow):
         # After successful download:
         self.image_cache[url] = filename
         return filename
-
 
     def initialize_token_counter(self):
         """Initialize token counter based on existing punches during current meal time"""
@@ -1949,7 +1990,7 @@ class EzeeCanteen(QMainWindow):
         # if not hasattr(self, 'db_available') or not self.db_available:
         #     print("Skipping database insertion - database not available")
         #     return
-            
+        # print(f"\n\n\n\n {event_data['deviceIP']} \n\n\n\n")
         try:
             # Connect to the database
             conn = mysql.connector.connect(
@@ -2059,6 +2100,7 @@ class EzeeCanteen(QMainWindow):
                 
                 if not device_ip:
                     # If we couldn't determine the source, use the first active device
+
                     device_ip = next(iter(self.active_devices))
             else:
                 # Legacy mode - use the global IP
@@ -2107,15 +2149,18 @@ class EzeeCanteen(QMainWindow):
 
             # Get device serial based on which device generated the event
             serial_no = ""
-            if hasattr(self, 'active_devices') and device_ip in self.active_devices:
-                serial_no = self.active_devices[device_ip]['serial']
+            
+            ip = event_data["deviceIP"]
+
+
+            if hasattr(self, 'active_devices') and ip in self.active_devices:
+                serial_no = self.active_devices[ip]['serial']
             else:
                 # Legacy mode - use the global device_serial
                 serial_no = getattr(self, 'device_serial', '')
             
             if not serial_no:
                 serial_no = event_data.get('serialNo', '')
-            
 
             if mode == "timeBased":
                 # Prepare values
@@ -2124,7 +2169,7 @@ class EzeeCanteen(QMainWindow):
                     punch_datetime,                         # PunchDateTime
                     punch_pic_url,                          # PunchPicURL
                     recognition_mode,                       # RecognitionMode
-                    device_ip,                              # IPAddress - Use the actual device IP
+                    ip,                              # IPAddress - Use the actual device IP
                     attendance_status,                      # AttendanceStatus
                     DB_NAME,                                # DB
                     att_in_out,                             # AttInOut

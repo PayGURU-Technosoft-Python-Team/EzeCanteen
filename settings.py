@@ -160,7 +160,8 @@ class EzeeCanteenWindow(QMainWindow):
         self.license_key = LK  # Store the license key
         self.license_key = LK
         print("Setting up loading process...")
-        
+        self.initial_settings = {}
+
         # Skip async loading and only use manual loading
         # Call manual load method immediately
         QTimer.singleShot(100, self.manually_run_load_settings)
@@ -1711,10 +1712,20 @@ class EzeeCanteenWindow(QMainWindow):
         try:
             # Import the timeBase module and get EzeeCanteen window
             from timeBase import main as timebase_main
-            
+            from CustomLiveDisplay import custom_main
+
+            if os.path.exists('appSettings.json'):
+                with open('appSettings.json', 'r') as f:
+                    self.initial_settings = json.load(f)
+            canteenMenu = self.initial_settings.get('CanteenMenu')
+            mode = canteenMenu.get('currentMode')
+
             try:
                 # The modified timebase_main() will now force a refresh of device configurations
-                ezee_canteen = timebase_main()
+                if mode == "custom":
+                    ezee_canteen = custom_main()
+                else:
+                    ezee_canteen = timebase_main()
                 
                 # Set up navigating back to settings
                 ezee_canteen.settings_mode = True
