@@ -1,0 +1,1355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EzeeCanteen Technical Architecture</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+            background: #0a0e27;
+            color: #e2e8f0;
+            line-height: 1.4;
+            font-size: 14px;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: #0f1419;
+            border: 1px solid #1e293b;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            border-bottom: 2px solid #0ea5e9;
+            padding: 20px 30px;
+        }
+        
+        .header h1 {
+            color: #0ea5e9;
+            font-size: 24px;
+            font-weight: 600;
+            letter-spacing: -0.025em;
+            margin-bottom: 8px;
+        }
+        
+        .header .subtitle {
+            color: #64748b;
+            font-size: 14px;
+            font-weight: 400;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .architecture-overview {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            overflow: hidden;
+        }
+        
+        .section-header {
+            background: #334155;
+            color: #0ea5e9;
+            padding: 12px 20px;
+            font-size: 16px;
+            font-weight: 600;
+            border-bottom: 1px solid #475569;
+        }
+        
+        .section-content {
+            padding: 20px;
+        }
+        
+        .flow-diagram {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .component-block {
+            background: #1e293b;
+            border: 1px solid #475569;
+            border-radius: 6px;
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+        
+        .component-block:hover {
+            border-color: #0ea5e9;
+            box-shadow: 0 0 0 1px rgba(14, 165, 233, 0.3);
+        }
+        
+        .component-header {
+            background: #334155;
+            padding: 10px 15px;
+            border-bottom: 1px solid #475569;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .component-type {
+            background: #0ea5e9;
+            color: #0f1419;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .component-type.core { background: #ef4444; }
+        .component-type.network { background: #10b981; }
+        .component-type.database { background: #f59e0b; }
+        .component-type.printer { background: #8b5cf6; }
+        .component-type.thread { background: #ec4899; }
+        .component-type.ui { background: #06b6d4; }
+        
+        .component-title {
+            color: #f1f5f9;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .component-body {
+            padding: 15px;
+        }
+        
+        .method-list {
+            list-style: none;
+            margin: 10px 0;
+        }
+        
+        .method-list li {
+            padding: 4px 0;
+            color: #94a3b8;
+            font-size: 13px;
+        }
+        
+        .method-name {
+            color: #0ea5e9;
+            font-weight: 500;
+        }
+        
+        .data-flow {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .flow-step {
+            display: flex;
+            align-items: center;
+            margin: 15px 0;
+            padding: 12px;
+            background: #0f1419;
+            border: 1px solid #334155;
+            border-radius: 4px;
+        }
+        
+        .step-number {
+            background: #0ea5e9;
+            color: #0f1419;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 600;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+        
+        .step-content {
+            flex-grow: 1;
+        }
+        
+        .step-title {
+            color: #f1f5f9;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .step-desc {
+            color: #64748b;
+            font-size: 13px;
+        }
+        
+        .code-block {
+            background: #0f1419;
+            border: 1px solid #334155;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 15px 0;
+            font-family: 'SF Mono', monospace;
+            color: #e2e8f0;
+            overflow-x: auto;
+        }
+        
+        .api-endpoint {
+            color: #10b981;
+        }
+        
+        .sql-query {
+            color: #f59e0b;
+        }
+        
+        .class-name {
+            color: #0ea5e9;
+        }
+        
+        .method-call {
+            color: #ec4899;
+        }
+        
+        .network-diagram {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin: 20px 0;
+            align-items: center;
+        }
+        
+        .network-node {
+            background: #1e293b;
+            border: 2px solid #334155;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .network-node.device { border-color: #10b981; }
+        .network-node.app { border-color: #0ea5e9; }
+        .network-node.database { border-color: #f59e0b; }
+        .network-node.printer { border-color: #8b5cf6; }
+        
+        .network-arrow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #64748b;
+            font-size: 18px;
+        }
+        
+        .technical-specs {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .spec-table {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        
+        .spec-table th {
+            background: #334155;
+            color: #0ea5e9;
+            padding: 10px 15px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 1px solid #475569;
+        }
+        
+        .spec-table td {
+            padding: 8px 15px;
+            border-bottom: 1px solid #334155;
+            color: #94a3b8;
+        }
+        
+        .spec-table td:first-child {
+            color: #f1f5f9;
+            font-weight: 500;
+        }
+        
+        .thread-timeline {
+            background: #0f1419;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .timeline-item {
+            display: flex;
+            margin: 10px 0;
+            align-items: center;
+        }
+        
+        .timeline-marker {
+            width: 8px;
+            height: 8px;
+            background: #0ea5e9;
+            border-radius: 50%;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+        
+        .timeline-content {
+            flex-grow: 1;
+            padding: 8px 12px;
+            background: #1e293b;
+            border-radius: 4px;
+            border-left: 3px solid #0ea5e9;
+        }
+        
+        .dependency-graph {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .dependency-level {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .dependency-node {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            padding: 12px 16px;
+            text-align: center;
+            min-width: 140px;
+        }
+        
+        .dependency-connector {
+            color: #64748b;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>EzeeCanteen Biometric Authentication System</h1>
+            <div class="subtitle">Technical Architecture Analysis & Data Flow Documentation</div>
+        </div>
+        
+        <div class="content">
+            
+            <!-- System Architecture Overview -->
+            <div class="architecture-overview">
+                <div class="section-header">System Architecture Overview</div>
+                <div class="section-content">
+                    <div class="flow-diagram">
+                        
+                        <div class="component-block">
+                            <div class="component-header">
+                                <div class="component-type core">CORE</div>
+                                <div class="component-title">EzeeCanteen (QMainWindow)</div>
+                            </div>
+                            <div class="component-body">
+                                <div class="code-block">class EzeeCanteen(QMainWindow):
+    def __init__(self):
+        self.communicator = Communicator()
+        self.active_devices = {}
+        self.device_printers = {}
+        self.events = []
+        self.token_counter = 0</div>
+                                <ul class="method-list">
+                                    <li><span class="method-name">init_ui()</span> - Responsive grid layout setup</li>
+                                    <li><span class="method-name">initialize_devices()</span> - Multi-device configuration</li>
+                                    <li><span class="method-name">add_auth_event()</span> - Event processing pipeline</li>
+                                    <li><span class="method-name">insert_to_database()</span> - MySQL audit logging</li>
+                                    <li><span class="method-name">update_user_begin_time()</span> - Access control management</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="component-block">
+                            <div class="component-header">
+                                <div class="component-type thread">THREAD</div>
+                                <div class="component-title">AuthEventMonitor (QThread)</div>
+                            </div>
+                            <div class="component-body">
+                                <div class="code-block">class AuthEventMonitor(QThread):
+    def run(self):
+        while self.running:
+            if self.check_time_range():
+                self.fetch_auth_events()
+                self.process_pagination()
+                time.sleep(1)</div>
+                                <ul class="method-list">
+                                    <li><span class="method-name">check_time_range()</span> - Meal schedule validation</li>
+                                    <li><span class="method-name">run()</span> - Continuous event polling loop</li>
+                                    <li><span class="method-name">retry_connection()</span> - Network failure recovery</li>
+                                    <li><span class="method-name">check_watchdog()</span> - Health monitoring</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="component-block">
+                            <div class="component-header">
+                                <div class="component-type network">NETWORK</div>
+                                <div class="component-title">Device Communication Layer</div>
+                            </div>
+                            <div class="component-body">
+                                <div class="code-block">URL: <span class="api-endpoint">http://{ip}:{port}/ISAPI/AccessControl/AcsEvent</span>
+Auth: HTTPDigestAuth(username, password)
+Payload: {
+    "AcsEventCond": {
+        "searchID": "1",
+        "searchResultPosition": 0,
+        "maxResults": 5,
+        "major": 5,  # Access Control
+        "minor": 0,  # Auth passed
+        "startTime": "2024-01-01T00:00:00+05:30",
+        "endTime": "2024-01-01T23:59:59+05:30"
+    }
+}</div>
+                                <ul class="method-list">
+                                    <li><span class="method-name">getDeviceDetails()</span> - Device discovery & serial extraction</li>
+                                    <li><span class="method-name">modify_user_begin_time()</span> - ISAPI user modification</li>
+                                    <li><span class="method-name">fetch_device_config()</span> - Dynamic configuration loading</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="component-block">
+                            <div class="component-header">
+                                <div class="component-type database">DATABASE</div>
+                                <div class="component-title">MySQL Data Persistence</div>
+                            </div>
+                            <div class="component-body">
+                                <div class="code-block">INSERT INTO <span class="sql-query">sequentiallog</span> (
+    PunchCardNo, PunchDateTime, PunchPicURL,
+    RecognitionMode, IPAddress, AttendanceStatus,
+    ZK_SerialNo, CanteenMode, Fooditem,
+    totalAmount, LicenseKey
+) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)</div>
+                                <ul class="method-list">
+                                    <li><span class="method-name">test_db_connection()</span> - Connection health check</li>
+                                    <li><span class="method-name">initialize_token_counter()</span> - Daily count initialization</li>
+                                    <li><span class="method-name">fetch_device_config()</span> - License-based device filtering</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="component-block">
+                            <div class="component-header">
+                                <div class="component-type printer">PRINTER</div>
+                                <div class="component-title">Thermal Printer Interface</div>
+                            </div>
+                            <div class="component-body">
+                                <div class="code-block">print_slip(
+    printer_ip, printer_port, 0,
+    header, coupon_type, emp_id, name,
+    punch_time, special_message, footer
+)</div>
+                                <ul class="method-list">
+                                    <li><span class="method-name">test_printer_connections()</span> - Socket connectivity validation</li>
+                                    <li><span class="method-name">print_slip()</span> - ESC/POS command generation</li>
+                                    <li>Device-specific printer mapping via <span class="method-name">DevicePrinterIP</span></li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="component-block">
+                            <div class="component-header">
+                                <div class="component-type ui">UI</div>
+                                <div class="component-title">AuthEventItem (QFrame)</div>
+                            </div>
+                            <div class="component-body">
+                                <div class="code-block">class AuthEventItem(QFrame):
+    def __init__(self, event_data):
+        self.event_data = event_data
+        self.minor = event_data.get('minor', 0)
+        self.setFixedHeight(200)
+        self.load_image(event_data.get('pictureURL'))</div>
+                                <ul class="method-list">
+                                    <li><span class="method-name">load_image()</span> - Async image download with caching</li>
+                                    <li><span class="method-name">_fetch_image()</span> - HTTP digest authentication</li>
+                                    <li>Dynamic grid layout: 2-6 columns based on viewport</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Technical Specifications -->
+            <div class="architecture-overview">
+                <div class="section-header">Technical Specifications & Implementation Details</div>
+                <div class="section-content">
+                    <div class="technical-specs">
+                        
+                        <div class="spec-table">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr><th colspan="2">Authentication Protocol Stack</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>Transport</td><td>HTTP/1.1 over TCP</td></tr>
+                                    <tr><td>Authentication</td><td>RFC 2617 Digest Authentication</td></tr>
+                                    <tr><td>API Standard</td><td>Hikvision ISAPI v2.0</td></tr>
+                                    <tr><td>Data Format</td><td>JSON with XML fallback</td></tr>
+                                    <tr><td>Polling Interval</td><td>1000ms during meal periods</td></tr>
+                                    <tr><td>Timeout</td><td>30s connection, 15s read</td></tr>
+                                    <tr><td>Retry Logic</td><td>Exponential backoff (max 5 attempts)</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="spec-table">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr><th colspan="2">Database Schema & Indexing</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>Engine</td><td>MySQL 8.0+ InnoDB</td></tr>
+                                    <tr><td>Character Set</td><td>utf8mb4_unicode_ci</td></tr>
+                                    <tr><td>Primary Table</td><td>sequentiallog</td></tr>
+                                    <tr><td>Config Table</td><td>configh (device mapping)</td></tr>
+                                    <tr><td>Encryption</td><td>AES_DECRYPT for passwords</td></tr>
+                                    <tr><td>Indexing</td><td>PunchDateTime, LicenseKey, IPAddress</td></tr>
+                                    <tr><td>Connection Pool</td><td>mysql.connector with timeout</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="spec-table">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr><th colspan="2">Threading & Concurrency Model</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>Main Thread</td><td>Qt Event Loop (UI)</td></tr>
+                                    <tr><td>Monitor Threads</td><td>1 per device (QThread)</td></tr>
+                                    <tr><td>Worker Threads</td><td>DB/Printer tests (QThread)</td></tr>
+                                    <tr><td>Signal/Slot</td><td>Qt's thread-safe communication</td></tr>
+                                    <tr><td>Synchronization</td><td>QMutex for shared resources</td></tr>
+                                    <tr><td>Cleanup</td><td>Graceful shutdown with timeouts</td></tr>
+                                    <tr><td>Watchdog</td><td>60s health checks per monitor</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="spec-table">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr><th colspan="2">Recognition Technology Support</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>Face Recognition</td><td>minor=75 (Deep Learning)</td></tr>
+                                    <tr><td>Fingerprint</td><td>minor=38 (Capacitive/Optical)</td></tr>
+                                    <tr><td>Card/RFID</td><td>minor=1 (125kHz/13.56MHz)</td></tr>
+                                    <tr><td>Multi-modal</td><td>Combined verification support</td></tr>
+                                    <tr><td>Anti-spoofing</td><td>Liveness detection (device-dependent)</td></tr>
+                                    <tr><td>Template Storage</td><td>Device-local encrypted templates</td></tr>
+                                    <tr><td>Threshold</td><td>Configurable matching confidence</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Detailed Data Flow -->
+            <div class="architecture-overview">
+                <div class="section-header">Detailed Authentication Processing Pipeline</div>
+                <div class="section-content">
+                    <div class="data-flow">
+                        
+                        <div class="flow-step">
+                            <div class="step-number">1</div>
+                            <div class="step-content">
+                                <div class="step-title">Biometric Capture & Device Processing</div>
+                                <div class="step-desc">Hardware sensors capture biometric data → Local template matching → Authentication decision → Event generation with metadata (employee ID, timestamp, recognition confidence, device serial)</div>
+                            </div>
+                        </div>
+                        
+                        <div class="flow-step">
+                            <div class="step-number">2</div>
+                            <div class="step-content">
+                                <div class="step-title">ISAPI Event Polling & Pagination</div>
+                                <div class="step-desc">AuthEventMonitor threads poll /ISAPI/AccessControl/AcsEvent with time window filters → Handle pagination (maxResults=5 per batch) → Parse JSON response → Extract InfoList array</div>
+                            </div>
+                        </div>
+                        
+                        <div class="flow-step">
+                            <div class="step-number">3</div>
+                            <div class="step-content">
+                                <div class="step-title">Event Validation & Deduplication</div>
+                                <div class="step-desc">Validate minor codes (1,38,75) → Generate unique event ID (employeeNoString-timestamp) → Check processed_events set → Filter duplicate events within polling window</div>
+                            </div>
+                        </div>
+                        
+                        <div class="flow-step">
+                            <div class="step-number">4</div>
+                            <div class="step-content">
+                                <div class="step-title">Qt Signal Emission & Thread Communication</div>
+                                <div class="step-desc">AuthEventMonitor.communicator.new_auth_event.emit(event) → Thread-safe signal crosses from worker thread to main UI thread → EzeeCanteen.add_auth_event() slot handler</div>
+                            </div>
+                        </div>
+                        
+                        <div class="flow-step">
+                            <div class="step-number">5</div>
+                            <div class="step-content">
+                                <div class="step-title">Meal Schedule Validation & Counter Management</div>
+                                <div class="step-desc">Parse appSettings.json meal schedule → Match current time against fromTime/toTime ranges → Determine meal type (BREAKFAST/LUNCH/DINNER) → Increment token_counter → Check for meal period transitions</div>
+                            </div>
+                        </div>
+                        
+                        <div class="flow-step">
+                            <div class="step-number">6</div>
+                            <div class="step-content">
+                                <div class="step-title">UI Grid Management & Image Processing</div>
+                                <div class="step-desc">Create AuthEventItem(event_data) → Async image download via HTTPDigestAuth → Cache images in TEMP_DIR → Calculate responsive grid columns (2-6 based on viewport) → Insert into QGridLayout with sort by timestamp</div>
+                            </div>
+                        </div>
+                        
+                        <div class="flow-step">
+                            <div class="step-number">7</div>
+                            <div class="step-content">
+                                <div class="step-title">Database Transaction & Audit Trail</div>
+                                <div class="step-desc">Prepare INSERT statement with meal type mapping → Execute transaction with error handling → Log PunchCardNo, RecognitionMode, IPAddress, ZK_SerialNo → Update audit trail with LicenseKey filtering</div>
+                            </div>
+                        </div>
+                        
+                        <div class="flow-step">
+                            <div class="step-number">8</div>
+                            <div class="step-content">
+                                <div class="step-title">Thermal Printer Output & Token Generation</div>
+                                <div class="step-desc">Map device IP to printer via DevicePrinterIP → Test socket connectivity → Generate ESC/POS commands → Print header, employee details, meal type, footer → Handle printer offline scenarios</div>
+                            </div>
+                        </div>
+                        
+                        <div class="flow-step">
+                            <div class="step-number">9</div>
+                            <div class="step-content">
+                                <div class="step-title">Access Control Management (Optional)</div>
+                                <div class="step-desc">If DisablePunch enabled → Calculate next meal period → Call modify_user_begin_time() → Update device user permissions → Set beginTime to next meal schedule → Prevent duplicate punches</div>
+                            </div>
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Network Architecture -->
+            <div class="architecture-overview">
+                <div class="section-header">Network Topology & Communication Protocols</div>
+                <div class="section-content">
+                    <div class="network-diagram">
+                        <div class="network-node device">
+                            <div style="color: #10b981; font-weight: 600; margin-bottom: 8px;">Biometric Devices</div>
+                            <div style="font-size: 12px; color: #64748b;">
+                                • Face Recognition Terminals<br>
+                                • Fingerprint Scanners<br>
+                                • RFID Card Readers<br>
+                                • IP: 192.168.x.x:80<br>
+                                • Protocol: HTTP/ISAPI
+                            </div>
+                        </div>
+                        
+                        <div class="network-arrow">→</div>
+                        
+                        <div class="network-node app">
+                            <div style="color: #0ea5e9; font-weight: 600; margin-bottom: 8px;">EzeeCanteen App</div>
+                            <div style="font-size: 12px; color: #64748b;">
+                                • PyQt5 GUI Application<br>
+                                • Multi-threaded Architecture<br>
+                                • Event Processing Engine<br>
+                                • Real-time Monitoring<br>
+                                • License Management
+                            </div>
+                        </div>
+                        
+                        <div class="network-arrow">↓</div>
+                        
+                        <div class="network-node database">
+                            <div style="color: #f59e0b; font-weight: 600; margin-bottom: 8px;">MySQL Database</div>
+                            <div style="font-size: 12px; color: #64748b;">
+                                • Host: 103.216.211.36:33975<br>
+                                • Schema: payguru_canteen<br>
+                                • Tables: sequentiallog, configh<br>
+                                • Encryption: AES for passwords<br>
+                                • Indexing: Multi-column indexes
+                            </div>
+                        </div>
+                        
+                        <div class="network-node printer">
+                            <div style="color: #8b5cf6; font-weight: 600; margin-bottom: 8px;">Thermal Printers</div>
+                            <div style="font-size: 12px; color: #64748b;">
+                                • ESC/POS Compatible<br>
+                                • Socket: TCP:9100<br>
+                                • Model: CITIZEN Series<br>
+                                • Paper: 80mm Thermal<br>
+                                • Commands: Text + Graphics
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="code-block">
+# Network Configuration Discovery Query
+SELECT 
+    SrNo, DeviceType, DeviceNumber, IP, Port, DeviceLocation, ComUser, 
+    Enable, DevicePrinterIP, DeviceName,
+    AES_DECRYPT(comKey, SHA2(CONCAT('pg2175', CreatedDateTime), 512)) as Pwd
+FROM configh
+WHERE Enable = 'Y' AND LicenseKey = %s
+ORDER BY DeviceType, DeviceNumber;
+
+# Authentication Event API Call
+POST http://{device_ip}:{port}/ISAPI/AccessControl/AcsEvent?format=json
+Authorization: Digest username="{user}", realm="Login", nonce="{nonce}", 
+              uri="/ISAPI/AccessControl/AcsEvent", response="{hash}"
+Content-Type: application/json
+
+{
+    "AcsEventCond": {
+        "searchID": "1",
+        "searchResultPosition": 0,
+        "maxResults": 5,
+        "major": 5,
+        "minor": 0,
+        "startTime": "2024-07-02T00:00:00+05:30",
+        "endTime": "2024-07-02T23:59:59+05:30"
+    }
+}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Thread Execution Timeline -->
+            <div class="architecture-overview">
+                <div class="section-header">Thread Execution Model & Lifecycle Management</div>
+                <div class="section-content">
+                    <div class="thread-timeline">
+                        <div class="timeline-item">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <div style="color: #0ea5e9; font-weight: 600;">Main Thread Initialization (0ms)</div>
+                                <div style="color: #64748b; font-size: 12px;">QApplication.exec() → EzeeCanteen.__init__() → init_ui() → delayed_initialization()</div>
+                            </div>
+                        </div>
+                        
+                        <div class="timeline-item">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <div style="color: #10b981; font-weight: 600;">Database Configuration Loading (100ms)</div>
+                                <div style="color: #64748b; font-size: 12px;">fetch_device_config() → MySQL connection → License validation → Device/Printer mapping</div>
+                            </div>
+                        </div>
+                        
+                        <div class="timeline-item">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <div style="color: #ec4899; font-weight: 600;">Worker Thread Spawning (200ms)</div>
+                                <div style="color: #64748b; font-size: 12px;">For each device: AuthEventMonitor(device_ip).start() → Thread pool management</div>
+                            </div>
+                        </div>
+                        
+                        <div class="timeline-item">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <div style="color: #f59e0b; font-weight: 600;">Device Health Checks (500ms)</div>
+                                <div style="color: #64748b; font-size: 12px;">test_printer_connections() → test_db_connection() → getDeviceDetails() per device</div>
+                            </div>
+                        </div>
+                        
+                        <div class="timeline-item">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <div style="color: #8b5cf6; font-weight: 600;">Continuous Monitoring Loop (1000ms intervals)</div>
+                                <div style="color: #64748b; font-size: 12px;">AuthEventMonitor.run() → check_time_range() → HTTP polling → Event processing</div>
+                            </div>
+                        </div>
+                        
+                        <div class="timeline-item">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <div style="color: #ef4444; font-weight: 600;">Watchdog & Error Recovery (60000ms)</div>
+                                <div style="color: #64748b; font-size: 12px;">check_watchdog() → Connection health → Exponential backoff → Thread restart</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="code-block">
+# Thread Management Implementation
+class AuthEventMonitor(QThread):
+    def __init__(self, communicator, device_ip=None):
+        super().__init__()
+        self.running = True
+        self.consecutive_errors = 0
+        self.max_consecutive_errors = 5
+        self.last_successful_fetch = datetime.now()
+        self.processed_events = set()
+        
+        # Watchdog timer for health monitoring
+        self.watchdog_timer = QTimer()
+        self.watchdog_timer.timeout.connect(self.check_watchdog)
+        self.watchdog_timer.start(60000)  # 60s intervals
+    
+    def run(self):
+        while self.running:
+            try:
+                current_in_meal_time = self.check_time_range()
+                if not current_in_meal_time:
+                    time.sleep(5)
+                    continue
+                    
+                # Pagination handling for large result sets
+                search_position = 0
+                has_more_pages = True
+                
+                while has_more_pages and self.running:
+                    response = self.fetch_events_page(search_position)
+                    events = self.process_response(response)
+                    
+                    if not events:
+                        has_more_pages = False
+                    else:
+                        search_position += len(events)
+                        self.emit_new_events(events)
+                        
+            except Exception as e:
+                self.handle_error(e)
+                time.sleep(self.calculate_backoff())
+    
+    def stop(self):
+        self.running = False
+        self.watchdog_timer.stop()
+        self.wait(3000)  # 3s graceful shutdown timeout
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Error Handling & Recovery -->
+            <div class="architecture-overview">
+                <div class="section-header">Error Handling & Fault Tolerance Mechanisms</div>
+                <div class="section-content">
+                    <div class="technical-specs">
+                        
+                        <div class="component-block">
+                            <div class="component-header">
+                                <div class="component-type network">NETWORK</div>
+                                <div class="component-title">Connection Failure Recovery</div>
+                            </div>
+                            <div class="component-body">
+                                <div class="code-block">
+# Network Error Handling Strategy
+def retry_connection(self):
+    # Exponential backoff implementation
+    backoff_time = min(2 ** self.consecutive_errors, 60)
+    time.sleep(backoff_time)
+    
+    # Reset credentials and endpoint
+    self.url = f"http://{self.ip}:{self.port}/ISAPI/AccessControl/AcsEvent"
+    
+    # Test connectivity before resuming
+    try:
+        response = requests.get(
+            f"http://{self.ip}:{self.port}/ISAPI/System/deviceinfo",
+            auth=HTTPDigestAuth(self.username, self.password),
+            timeout=5
+        )
+        if response.status_code == 200:
+            self.consecutive_errors = 0
+            logging.info(f"Connection restored to {self.ip}")
+    except Exception as e:
+        logging.error(f"Retry failed: {e}")
+                                </div>
+                                <ul class="method-list">
+                                    <li>Exponential backoff: 2^n seconds (max 60s)</li>
+                                    <li>Maximum 5 consecutive errors before reset</li>
+                                    <li>Automatic credential refresh from database</li>
+                                    <li>Device health ping before resuming</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="component-block">
+                            <div class="component-header">
+                                <div class="component-type database">DATABASE</div>
+                                <div class="component-title">Transaction Safety & Rollback</div>
+                            </div>
+                            <div class="component-body">
+                                <div class="code-block">
+# Database Transaction Management
+try:
+    conn = mysql.connector.connect(
+        host=DB_HOST, user=DB_USER, port=DB_PORT,
+        password=DB_PASS, database=DB_NAME,
+        autocommit=False,  # Explicit transaction control
+        connection_timeout=5
+    )
+    
+    cursor = conn.cursor()
+    cursor.execute(sql, values)
+    conn.commit()  # Atomic commit
+    
+except mysql.connector.Error as err:
+    if conn:
+        conn.rollback()  # Rollback on failure
+    logging.error(f"Database error: {err}")
+    
+finally:
+    if cursor: cursor.close()
+    if conn: conn.close()
+                                </div>
+                                <ul class="method-list">
+                                    <li>ACID transaction guarantees</li>
+                                    <li>Connection pooling with timeout</li>
+                                    <li>Automatic rollback on failure</li>
+                                    <li>Prepared statements for SQL injection prevention</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="component-block">
+                            <div class="component-header">
+                                <div class="component-type printer">PRINTER</div>
+                                <div class="component-title">Print Job Reliability</div>
+                            </div>
+                            <div class="component-body">
+                                <div class="code-block">
+# Printer Health & Job Management
+def test_printer_connection(self):
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(1.0)  # 1s connection timeout
+        result = s.connect_ex((self.printer_ip, self.printer_port))
+        s.close()
+        
+        if result == 0:
+            self.printer_available = True
+            return True
+        else:
+            self.printer_available = False
+            logging.warning(f"Printer offline: {self.printer_ip}")
+            return False
+            
+    except Exception as e:
+        logging.error(f"Printer test failed: {e}")
+        return False
+                                </div>
+                                <ul class="method-list">
+                                    <li>Pre-print connectivity validation</li>
+                                    <li>Socket timeout for responsive checking</li>
+                                    <li>ESC/POS command error handling</li>
+                                    <li>Graceful degradation when printer offline</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="component-block">
+                            <div class="component-header">
+                                <div class="component-type ui">UI</div>
+                                <div class="component-title">Memory Management & Resource Cleanup</div>
+                            </div>
+                            <div class="component-body">
+                                <div class="code-block">
+# Qt Widget Lifecycle Management
+def clear_grid(self):
+    if not hasattr(self, 'grid_layout') or sip.isdeleted(self.grid_layout):
+        return
+        
+    # Mark widgets as deleted before removal
+    for i in range(self.grid_layout.count()):
+        item = self.grid_layout.itemAt(i)
+        if item and item.widget():
+            if hasattr(item.widget(), 'is_deleted'):
+                item.widget().is_deleted = True
+    
+    # Safe widget removal
+    while self.grid_layout.count():
+        item = self.grid_layout.takeAt(0)
+        widget = item.widget()
+        if widget:
+            widget.deleteLater()
+            
+# Temporary file cleanup
+def closeEvent(self, event):
+    try:
+        if os.path.exists(TEMP_DIR):
+            shutil.rmtree(TEMP_DIR)
+    except Exception as e:
+        logging.error(f"Cleanup error: {e}")
+                                </div>
+                                <ul class="method-list">
+                                    <li>Qt SIP wrapper validation before access</li>
+                                    <li>Proper widget lifecycle with deleteLater()</li>
+                                    <li>Temporary file cleanup on exit</li>
+                                    <li>Memory leak prevention for image cache</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Performance Optimization -->
+            <div class="architecture-overview">
+                <div class="section-header">Performance Optimization & Scalability Features</div>
+                <div class="section-content">
+                    <div class="data-flow">
+                        
+                        <div class="flow-step">
+                            <div class="step-number">1</div>
+                            <div class="step-content">
+                                <div class="step-title">Efficient Event Deduplication</div>
+                                <div class="step-desc">
+                                    <div class="code-block">
+# Event ID generation for deduplication
+event_id = f"{emp_id}-{event_time}"
+if event_id not in self.processed_events:
+    self.processed_events.add(event_id)
+    
+# LRU cache maintenance (prevent memory bloat)
+if len(self.processed_events) > 1000:
+    self.processed_events = set(list(self.processed_events)[-500:])
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="flow-step">
+                            <div class="step-number">2</div>
+                            <div class="step-content">
+                                <div class="step-title">Responsive Grid Layout Algorithm</div>
+                                <div class="step-desc">
+                                    <div class="code-block">
+# Dynamic column calculation based on viewport
+window_width = self.width()
+if window_width >= 1600: cols = 6
+elif window_width >= 1280: cols = 5  
+elif window_width >= 900: cols = 4
+elif window_width >= 768: cols = 3
+else: cols = 2
+
+# Calculate optimal card width
+scroll_area_width = self.centralWidget().findChild(QScrollArea).width()
+available_width = scroll_area_width - scrollbar_width - margins - spacing
+card_width = available_width // cols
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="flow-step">
+                            <div class="step-number">3</div>
+                            <div class="step-content">
+                                <div class="step-title">Asynchronous Image Loading & Caching</div>
+                                <div class="step-desc">
+                                    <div class="code-block">
+# Image cache with persistent storage
+self.image_cache = {}  # url -> local_file_path mapping
+
+def get_cached_image_path(self, url):
+    if url in self.image_cache:
+        cached_path = self.image_cache[url]
+        if os.path.exists(cached_path):
+            return cached_path
+    
+    # Download and cache with unique identifier
+    unique_id = str(uuid.uuid4())
+    filename = os.path.join(TEMP_DIR, f"image_{unique_id}.jpg")
+    
+    # Async download with digest auth
+    response = requests.get(url, auth=HTTPDigestAuth(username, password))
+    if response.status_code == 200:
+        self.image_cache[url] = filename
+        return filename
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="flow-step">
+                            <div class="step-number">4</div>
+                            <div class="step-content">
+                                <div class="step-title">Database Query Optimization</div>
+                                <div class="step-desc">
+                                    <div class="code-block">
+# Optimized device configuration query with indexing
+SELECT 
+    SrNo, DeviceType, DeviceNumber, IP, Port, DeviceLocation, ComUser, 
+    Enable, DevicePrinterIP, DeviceName,
+    AES_DECRYPT(comKey, SHA2(CONCAT('pg2175', CreatedDateTime), 512)) as Pwd
+FROM configh
+WHERE Enable = 'Y' AND LicenseKey = %s  -- Indexed column
+ORDER BY DeviceType, DeviceNumber
+LIMIT 50;  -- Prevent excessive device loading
+
+# Token counter initialization with time-based filtering
+SELECT COUNT(*) as punch_count 
+FROM sequentiallog 
+WHERE PunchDateTime >= %s AND PunchDateTime <= %s 
+AND LicenseKey = %s AND DATE(PunchDateTime) = %s;
+-- Indexes: (PunchDateTime, LicenseKey), (PunchDateTime)
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="flow-step">
+                            <div class="step-number">5</div>
+                            <div class="step-content">
+                                <div class="step-title">Memory-Efficient Event Management</div>
+                                <div class="step-desc">
+                                    <div class="code-block">
+# Circular buffer for events (prevent unlimited growth)
+if len(self.events) > self.max_events:  # max_events = 18
+    self.events = self.events[:self.max_events]
+    
+# Lazy UI updates (only when necessary)
+def refresh_grid(self):
+    if not self.resized:  # Debounce rapid resize events
+        return
+    
+    QTimer.singleShot(200, self._actual_refresh)  # Delayed execution
+    
+def _actual_refresh(self):
+    self.resized = False
+    if self.events:
+        self.clear_grid()
+        self.populate_grid()
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Security & Compliance -->
+            <div class="architecture-overview">
+                <div class="section-header">Security Framework & Compliance Measures</div>
+                <div class="section-content">
+                    <div class="technical-specs">
+                        
+                        <div class="spec-table">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr><th colspan="2">Authentication Security</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>Protocol</td><td>HTTP Digest Authentication (RFC 2617)</td></tr>
+                                    <tr><td>Hash Algorithm</td><td>MD5 (device compatibility)</td></tr>
+                                    <tr><td>Nonce Handling</td><td>Server-generated, time-based</td></tr>
+                                    <tr><td>Credential Storage</td><td>AES-256 encrypted in database</td></tr>
+                                    <tr><td>Session Management</td><td>Stateless, per-request auth</td></tr>
+                                    <tr><td>Timeout</td><td>30s connection, 15s read timeout</td></tr>
+                                    <tr><td>Retry Logic</td><td>Max 5 attempts with backoff</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="spec-table">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr><th colspan="2">Data Protection & Privacy</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>Biometric Data</td><td>Device-local storage only</td></tr>
+                                    <tr><td>Image Transmission</td><td>HTTPS with digest auth</td></tr>
+                                    <tr><td>Database Encryption</td><td>AES-256 for sensitive fields</td></tr>
+                                    <tr><td>Audit Logging</td><td>Complete transaction trail</td></tr>
+                                    <tr><td>Access Control</td><td>License-based device filtering</td></tr>
+                                    <tr><td>Data Retention</td><td>Configurable purge policies</td></tr>
+                                    <tr><td>PII Handling</td><td>Minimal data collection</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="spec-table">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr><th colspan="2">Network Security</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>Transport</td><td>Private network deployment</td></tr>
+                                    <tr><td>Firewall</td><td>Port-specific access control</td></tr>
+                                    <tr><td>VPN Support</td><td>Site-to-site connectivity</td></tr>
+                                    <tr><td>IP Whitelisting</td><td>Device IP validation</td></tr>
+                                    <tr><td>Certificate</td><td>Device-specific certificates</td></tr>
+                                    <tr><td>Intrusion Detection</td><td>Failed auth monitoring</td></tr>
+                                    <tr><td>Traffic Analysis</td><td>Anomaly detection logs</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                    </div>
+                    
+                    <div class="code-block">
+# Security Implementation Examples
+
+# 1. Password Decryption from Database
+AES_DECRYPT(comKey, SHA2(CONCAT('pg2175', CreatedDateTime), 512)) as Pwd
+
+# 2. Digest Authentication Implementation
+auth = HTTPDigestAuth(username, password)
+response = requests.post(url, auth=auth, json=payload, timeout=30)
+
+# 3. SQL Injection Prevention
+cursor.execute(
+    "INSERT INTO sequentiallog (PunchCardNo, PunchDateTime, RecognitionMode) VALUES (%s, %s, %s)",
+    (emp_id, timestamp, recognition_mode)
+)
+
+# 4. License-based Access Control
+WHERE Enable = 'Y' AND LicenseKey = %s
+
+# 5. Secure Temporary File Handling
+temp_file = os.path.join(TEMP_DIR, f"image_{uuid.uuid4()}.jpg")
+# Automatic cleanup on application exit
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Deployment Architecture -->
+            <div class="architecture-overview">
+                <div class="section-header">Deployment Architecture & Infrastructure Requirements</div>
+                <div class="section-content">
+                    <div class="dependency-graph">
+                        
+                        <div class="dependency-level">
+                            <div class="dependency-node" style="border-color: #10b981;">
+                                <div style="color: #10b981; font-weight: 600;">Network Infrastructure</div>
+                                <div style="font-size: 12px; color: #64748b;">
+                                    • Gigabit Ethernet Switch<br>
+                                    • DHCP/Static IP Management<br>
+                                    • VLAN Segmentation<br>
+                                    • Network Time Protocol (NTP)
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="dependency-connector">↓</div>
+                        
+                        <div class="dependency-level">
+                            <div class="dependency-node" style="border-color: #f59e0b;">
+                                <div style="color: #f59e0b; font-weight: 600;">Database Server</div>
+                                <div style="font-size: 12px; color: #64748b;">
+                                    • MySQL 8.0+ Server<br>
+                                    • InnoDB Storage Engine<br>
+                                    • Automated Backup<br>
+                                    • Replication (Optional)
+                                </div>
+                            </div>
+                            
+                            <div class="dependency-node" style="border-color: #10b981;">
+                                <div style="color: #10b981; font-weight: 600;">Biometric Devices</div>
+                                <div style="font-size: 12px; color: #64748b;">
+                                    • Hikvision/ZKTeco<br>
+                                    • ISAPI v2.0 Support<br>
+                                    • Ethernet Connectivity<br>
+                                    • Device Management
+                                </div>
+                            </div>
+                            
+                            <div class="dependency-node" style="border-color: #8b5cf6;">
+                                <div style="color: #8b5cf6; font-weight: 600;">Thermal Printers</div>
+                                <div style="font-size: 12px; color: #64748b;">
+                                    • CITIZEN/Epson Models<br>
+                                    • ESC/POS Protocol<br>
+                                    • Ethernet Interface<br>
+                                    • 80mm Paper Support
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="dependency-connector">↓</div>
+                        
+                        <div class="dependency-level">
+                            <div class="dependency-node" style="border-color: #0ea5e9;">
+                                <div style="color: #0ea5e9; font-weight: 600;">Application Server</div>
+                                <div style="font-size: 12px; color: #64748b;">
+                                    • Windows 10/11 or Linux<br>
+                                    • Python 3.8+ Runtime<br>
+                                    • PyQt5 Framework<br>
+                                    • 4GB RAM, 100GB Storage
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="dependency-connector">↓</div>
+                        
+                        <div class="dependency-level">
+                            <div class="dependency-node" style="border-color: #ec4899;">
+                                <div style="color: #ec4899; font-weight: 600;">Client Workstations</div>
+                                <div style="font-size: 12px; color: #64748b;">
+                                    • Display Monitors (1920x1080+)<br>
+                                    • Remote Desktop Support<br>
+                                    • Multi-monitor Setup<br>
+                                    • Cafeteria Integration
+                                </div>
+                            </div>
+                        </div>
+                        
+                    </div>
+                    
+                    <div class="code-block">
+# System Requirements & Dependencies
+
+## Python Dependencies
+PyQt5>=5.15.0              # GUI Framework
+requests>=2.25.0           # HTTP Client
+mysql-connector-python>=8.0 # Database Driver
+xmltodict>=0.12.0          # XML Parsing
+asyncio>=3.4.3             # Async Operations
+
+## Hardware Specifications
+CPU: Intel i5-8400 / AMD Ryzen 5 2600 (6 cores minimum)
+RAM: 8GB DDR4 (4GB minimum, 16GB recommended for large deployments)
+Storage: 250GB SSD (100GB minimum, high I/O for database and image cache)
+Network: Gigabit Ethernet (dedicated VLAN for device communication)
+Display: 1920x1080 minimum (supports up to 4K for large grid displays)
+
+## Network Topology
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Biometric     │    │   Application   │    │    Database     │
+│   Devices       │◄──►│     Server      │◄──►│     Server      │
+│ 192.168.1.10-50 │    │  192.168.1.100  │    │  192.168.1.200  │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       │                       │
+         └───────────────────────┼───────────────────────┘
+                                 │
+                    ┌─────────────────┐
+                    │   Thermal       │
+                    │   Printers      │
+                    │ 192.168.1.60-70 │
+                    └─────────────────┘
+
+## Port Configuration
+MySQL Database: 3306 (default) or 33975 (custom)
+Device ISAPI: 80/443 (HTTP/HTTPS)
+Printer ESC/POS: 9100 (standard)
+Application UI: Local display (no network ports)
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+</body>
+</html>
